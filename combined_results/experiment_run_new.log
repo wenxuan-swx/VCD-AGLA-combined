@@ -1,0 +1,33 @@
+nohup: ignoring input
+实验开始时间: Thu 16 Oct 2025 02:33:02 AM CST
+
+==========================================
+开始 LLaVA-1.5 实验
+==========================================
+跳过 LLaVA-1.5 COCO POPE (已在之前完成)
+
+==========================================
+实验 1/36
+模型: llava15
+数据集: aokvqa_pope
+方法: baseline
+==========================================
+✓ 已完成 (跳过): /root/autodl-tmp/COMBINED/combined_results/llava15_aokvqa_pope_baseline_seed55.jsonl (3000 行)
+Thu 16 Oct 2025 02:33:02 AM CST - SKIPPED: llava15 aokvqa_pope baseline
+
+==========================================
+实验 2/36
+模型: llava15
+数据集: aokvqa_pope
+方法: combined
+==========================================
+/root/autodl-tmp/COMBINED/utils/__init__.py:14: UserWarning: Could not import augmentation: No module named 'omegaconf'. AGLA functionality will not be available.
+  warnings.warn(f"Could not import augmentation: {e}. AGLA functionality will not be available.")
+/root/miniconda3/envs/vcd/lib/python3.9/site-packages/huggingface_hub/file_download.py:945: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
+  warnings.warn(
+Warning: AGLA not available: No module named 'omegaconf'
+✓ Evolved sampling function to VCD+AGLA three-way contrastive decoding
+Loading LLaVA model: llava-v1.5-7b from /root/autodl-tmp/models/llava-v1.5-7b
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:07<00:07,  7.05s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:09<00:00,  4.52s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:09<00:00,  4.90s/it]
+ERROR: AGLA requested but not available. Please install LAVIS:
+  pip install salesforce-lavis

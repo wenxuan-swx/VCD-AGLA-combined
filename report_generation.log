@@ -1,0 +1,47 @@
+开始收集和评估所有实验结果...
+✓ 评估完成: llava15 coco_pope baseline
+✓ 评估完成: llava15 coco_pope combined
+✓ 评估完成: llava15 aokvqa_pope baseline
+✓ 评估完成: llava15 aokvqa_pope combined
+✓ 评估完成: llava15 hallucinogen_identification baseline
+✓ 评估完成: llava15 hallucinogen_identification combined
+✓ 评估完成: llava15 hallucinogen_localization baseline
+✓ 评估完成: llava15 hallucinogen_localization combined
+✓ 评估完成: llava15 hallucinogen_visual_context baseline
+✓ 评估完成: llava15 hallucinogen_visual_context combined
+✓ 评估完成: llava15 hallucinogen_counterfactual baseline
+✓ 评估完成: llava15 hallucinogen_counterfactual combined
+✓ 评估完成: llava16 coco_pope baseline
+✓ 评估完成: llava16 coco_pope combined
+✓ 评估完成: llava16 aokvqa_pope baseline
+✓ 评估完成: llava16 aokvqa_pope combined
+✓ 评估完成: llava16 hallucinogen_identification baseline
+✓ 评估完成: llava16 hallucinogen_identification combined
+✓ 评估完成: llava16 hallucinogen_localization baseline
+✓ 评估完成: llava16 hallucinogen_localization combined
+✓ 评估完成: llava16 hallucinogen_visual_context baseline
+✓ 评估完成: llava16 hallucinogen_visual_context combined
+✓ 评估完成: llava16 hallucinogen_counterfactual baseline
+✓ 评估完成: llava16 hallucinogen_counterfactual combined
+✓ 评估完成: qwenvl coco_pope baseline
+✓ 评估完成: qwenvl coco_pope combined
+✓ 评估完成: qwenvl aokvqa_pope baseline
+✓ 评估完成: qwenvl aokvqa_pope combined
+✓ 评估完成: qwenvl hallucinogen_identification baseline
+✓ 评估完成: qwenvl hallucinogen_identification combined
+✓ 评估完成: qwenvl hallucinogen_localization baseline
+✓ 评估完成: qwenvl hallucinogen_localization combined
+✓ 评估完成: qwenvl hallucinogen_visual_context baseline
+✓ 评估完成: qwenvl hallucinogen_visual_context combined
+✓ 评估完成: qwenvl hallucinogen_counterfactual baseline
+⚠️  文件不完整 (1792 行): /root/autodl-tmp/COMBINED/combined_results/qwenvl_hallucinogen_counterfactual_combined_seed55.jsonl
+
+✓ 结果已保存: /root/autodl-tmp/COMBINED/combined_results/comprehensive_results.json
+
+✓ 报告已生成: /root/autodl-tmp/COMBINED/combined_results/COMPREHENSIVE_REPORT.md
+
+============================================================
+综合评估完成!
+============================================================
+JSON 结果: /root/autodl-tmp/COMBINED/combined_results/comprehensive_results.json
+Markdown 报告: /root/autodl-tmp/COMBINED/combined_results/COMPREHENSIVE_REPORT.md

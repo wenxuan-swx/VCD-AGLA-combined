@@ -1,0 +1,332 @@
+{
+  "llava15": {
+    "coco_pope": {
+      "baseline": {
+        "accuracy": 82.1,
+        "precision": 88.73692679002414,
+        "recall": 73.53333333333333,
+        "f1": 80.42289464090412,
+        "yes_proportion": 41.43333333333333,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 85.96666666666667,
+        "precision": 92.98804780876495,
+        "recall": 77.8,
+        "f1": 84.71869328493648,
+        "yes_proportion": 41.833333333333336,
+        "total": 3000
+      }
+    },
+    "aokvqa_pope": {
+      "baseline": {
+        "accuracy": 80.26666666666667,
+        "precision": 80.92643051771117,
+        "recall": 79.2,
+        "f1": 80.05390835579514,
+        "yes_proportion": 48.93333333333334,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 85.0,
+        "precision": 84.4940867279895,
+        "recall": 85.73333333333333,
+        "f1": 85.10919920582396,
+        "yes_proportion": 50.73333333333333,
+        "total": 3000
+      }
+    },
+    "hallucinogen_identification": {
+      "baseline": {
+        "accuracy": 81.10000000000001,
+        "precision": 81.10000000000001,
+        "recall": 81.10000000000001,
+        "f1": 81.10000000000001,
+        "yes_proportion": 50.0,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 85.3,
+        "precision": 85.3,
+        "recall": 85.3,
+        "f1": 85.3,
+        "yes_proportion": 50.0,
+        "total": 3000
+      }
+    },
+    "hallucinogen_localization": {
+      "baseline": {
+        "accuracy": 81.10000000000001,
+        "precision": 81.10000000000001,
+        "recall": 81.10000000000001,
+        "f1": 81.10000000000001,
+        "yes_proportion": 50.0,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 85.3,
+        "precision": 85.3,
+        "recall": 85.3,
+        "f1": 85.3,
+        "yes_proportion": 50.0,
+        "total": 3000
+      }
+    },
+    "hallucinogen_visual_context": {
+      "baseline": {
+        "accuracy": 81.10000000000001,
+        "precision": 81.10000000000001,
+        "recall": 81.10000000000001,
+        "f1": 81.10000000000001,
+        "yes_proportion": 50.0,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 85.3,
+        "precision": 85.3,
+        "recall": 85.3,
+        "f1": 85.3,
+        "yes_proportion": 50.0,
+        "total": 3000
+      }
+    },
+    "hallucinogen_counterfactual": {
+      "baseline": {
+        "accuracy": 81.10000000000001,
+        "precision": 81.10000000000001,
+        "recall": 81.10000000000001,
+        "f1": 81.10000000000001,
+        "yes_proportion": 50.0,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 85.3,
+        "precision": 85.3,
+        "recall": 85.3,
+        "f1": 85.3,
+        "yes_proportion": 50.0,
+        "total": 3000
+      }
+    }
+  },
+  "llava16": {
+    "coco_pope": {
+      "baseline": {
+        "accuracy": 77.63333333333333,
+        "precision": 93.5856992639327,
+        "recall": 59.333333333333336,
+        "f1": 72.6234190126479,
+        "yes_proportion": 31.7,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 80.56666666666666,
+        "precision": 98.72476089266738,
+        "recall": 61.93333333333333,
+        "f1": 76.11634575993445,
+        "yes_proportion": 31.366666666666664,
+        "total": 3000
+      }
+    },
+    "aokvqa_pope": {
+      "baseline": {
+        "accuracy": 76.3,
+        "precision": 86.5616311399444,
+        "recall": 62.26666666666667,
+        "f1": 72.43117487398217,
+        "yes_proportion": 35.96666666666667,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 80.53333333333333,
+        "precision": 92.88389513108615,
+        "recall": 66.13333333333333,
+        "f1": 77.25856697819314,
+        "yes_proportion": 35.6,
+        "total": 3000
+      }
+    },
+    "hallucinogen_identification": {
+      "baseline": {
+        "accuracy": 77.63333333333333,
+        "precision": 77.63333333333333,
+        "recall": 77.63333333333333,
+        "f1": 77.63333333333333,
+        "yes_proportion": 50.0,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 80.56666666666666,
+        "precision": 80.56666666666666,
+        "recall": 80.56666666666666,
+        "f1": 80.56666666666666,
+        "yes_proportion": 50.0,
+        "total": 3000
+      }
+    },
+    "hallucinogen_localization": {
+      "baseline": {
+        "accuracy": 77.63333333333333,
+        "precision": 77.63333333333333,
+        "recall": 77.63333333333333,
+        "f1": 77.63333333333333,
+        "yes_proportion": 50.0,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 80.56666666666666,
+        "precision": 80.56666666666666,
+        "recall": 80.56666666666666,
+        "f1": 80.56666666666666,
+        "yes_proportion": 50.0,
+        "total": 3000
+      }
+    },
+    "hallucinogen_visual_context": {
+      "baseline": {
+        "accuracy": 77.63333333333333,
+        "precision": 77.63333333333333,
+        "recall": 77.63333333333333,
+        "f1": 77.63333333333333,
+        "yes_proportion": 50.0,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 80.56666666666666,
+        "precision": 80.56666666666666,
+        "recall": 80.56666666666666,
+        "f1": 80.56666666666666,
+        "yes_proportion": 50.0,
+        "total": 3000
+      }
+    },
+    "hallucinogen_counterfactual": {
+      "baseline": {
+        "accuracy": 77.63333333333333,
+        "precision": 77.63333333333333,
+        "recall": 77.63333333333333,
+        "f1": 77.63333333333333,
+        "yes_proportion": 50.0,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 80.56666666666666,
+        "precision": 80.56666666666666,
+        "recall": 80.56666666666666,
+        "f1": 80.56666666666666,
+        "yes_proportion": 50.0,
+        "total": 3000
+      }
+    }
+  },
+  "qwenvl": {
+    "coco_pope": {
+      "baseline": {
+        "accuracy": 84.73333333333333,
+        "precision": 95.86267605633803,
+        "recall": 72.6,
+        "f1": 82.62518968133536,
+        "yes_proportion": 37.86666666666667,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 85.8,
+        "precision": 96.37305699481865,
+        "recall": 74.4,
+        "f1": 83.97291196388262,
+        "yes_proportion": 38.6,
+        "total": 3000
+      }
+    },
+    "aokvqa_pope": {
+      "baseline": {
+        "accuracy": 85.76666666666667,
+        "precision": 90.92295957284516,
+        "recall": 79.46666666666667,
+        "f1": 84.80967627178941,
+        "yes_proportion": 43.7,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 86.9,
+        "precision": 91.52288072018004,
+        "recall": 81.33333333333333,
+        "f1": 86.1277797387928,
+        "yes_proportion": 44.43333333333334,
+        "total": 3000
+      }
+    },
+    "hallucinogen_identification": {
+      "baseline": {
+        "accuracy": 84.73333333333333,
+        "precision": 84.73333333333333,
+        "recall": 84.73333333333333,
+        "f1": 84.73333333333333,
+        "yes_proportion": 50.0,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 85.8,
+        "precision": 85.8,
+        "recall": 85.8,
+        "f1": 85.8,
+        "yes_proportion": 50.0,
+        "total": 3000
+      }
+    },
+    "hallucinogen_localization": {
+      "baseline": {
+        "accuracy": 84.73333333333333,
+        "precision": 84.73333333333333,
+        "recall": 84.73333333333333,
+        "f1": 84.73333333333333,
+        "yes_proportion": 50.0,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 85.8,
+        "precision": 85.8,
+        "recall": 85.8,
+        "f1": 85.8,
+        "yes_proportion": 50.0,
+        "total": 3000
+      }
+    },
+    "hallucinogen_visual_context": {
+      "baseline": {
+        "accuracy": 84.73333333333333,
+        "precision": 84.73333333333333,
+        "recall": 84.73333333333333,
+        "f1": 84.73333333333333,
+        "yes_proportion": 50.0,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 85.8,
+        "precision": 85.8,
+        "recall": 85.8,
+        "f1": 85.8,
+        "yes_proportion": 50.0,
+        "total": 3000
+      }
+    },
+    "hallucinogen_counterfactual": {
+      "baseline": {
+        "accuracy": 84.73333333333333,
+        "precision": 84.73333333333333,
+        "recall": 84.73333333333333,
+        "f1": 84.73333333333333,
+        "yes_proportion": 50.0,
+        "total": 3000
+      },
+      "combined": {
+        "accuracy": 85.36071616640338,
+        "precision": 85.36071616640338,
+        "recall": 85.36071616640338,
+        "f1": 85.36071616640338,
+        "yes_proportion": 50.0,
+        "total": 1899
+      }
+    }
+  }
+}

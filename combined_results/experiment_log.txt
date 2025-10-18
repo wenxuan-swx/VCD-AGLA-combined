@@ -1,0 +1,36 @@
+实验开始时间: Thu 16 Oct 2025 02:15:17 PM CST
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava15 aokvqa_pope baseline
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava15 aokvqa_pope combined
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava15 hallucinogen_identification baseline
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava15 hallucinogen_identification combined
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava15 hallucinogen_localization baseline
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava15 hallucinogen_localization combined
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava15 hallucinogen_visual_context baseline
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava15 hallucinogen_visual_context combined
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava15 hallucinogen_counterfactual baseline
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava15 hallucinogen_counterfactual combined
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava16 coco_pope baseline
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava16 coco_pope combined
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava16 aokvqa_pope baseline
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava16 aokvqa_pope combined
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava16 hallucinogen_identification baseline
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava16 hallucinogen_identification combined
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava16 hallucinogen_localization baseline
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava16 hallucinogen_localization combined
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava16 hallucinogen_visual_context baseline
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava16 hallucinogen_visual_context combined
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava16 hallucinogen_counterfactual baseline
+Thu 16 Oct 2025 02:15:17 PM CST - SKIPPED: llava16 hallucinogen_counterfactual combined
+Thu 16 Oct 2025 02:26:22 PM CST - SUCCESS: qwenvl coco_pope baseline (665s)
+Thu 16 Oct 2025 03:05:58 PM CST - SUCCESS: qwenvl coco_pope combined (2376s)
+Thu 16 Oct 2025 03:16:16 PM CST - SUCCESS: qwenvl aokvqa_pope baseline (618s)
+Thu 16 Oct 2025 03:54:48 PM CST - SUCCESS: qwenvl aokvqa_pope combined (2312s)
+Thu 16 Oct 2025 04:05:58 PM CST - SUCCESS: qwenvl hallucinogen_identification baseline (670s)
+Thu 16 Oct 2025 04:45:44 PM CST - SUCCESS: qwenvl hallucinogen_identification combined (2386s)
+Thu 16 Oct 2025 04:56:55 PM CST - SUCCESS: qwenvl hallucinogen_localization baseline (671s)
+Thu 16 Oct 2025 05:36:28 PM CST - SUCCESS: qwenvl hallucinogen_localization combined (2373s)
+Thu 16 Oct 2025 05:47:25 PM CST - SUCCESS: qwenvl hallucinogen_visual_context baseline (657s)
+Thu 16 Oct 2025 06:27:51 PM CST - SUCCESS: qwenvl hallucinogen_visual_context combined (2426s)
+Thu 16 Oct 2025 06:39:11 PM CST - SUCCESS: qwenvl hallucinogen_counterfactual baseline (680s)
+Thu 16 Oct 2025 07:19:45 PM CST - SUCCESS: qwenvl hallucinogen_counterfactual combined (2434s)
+实验结束时间: Thu 16 Oct 2025 07:19:45 PM CST

@@ -1,0 +1,13 @@
+{
+  "precision": 0.9298804780876494,
+  "recall": 0.778,
+  "f1": 0.8471869328493649,
+  "accuracy": 0.8596666666666667,
+  "yes_proportion": 0.41833333333333333,
+  "unknown_proportion": 0.0,
+  "true_pos": 1167,
+  "true_neg": 1412,
+  "false_pos": 88,
+  "false_neg": 333,
+  "total": 3000
+}

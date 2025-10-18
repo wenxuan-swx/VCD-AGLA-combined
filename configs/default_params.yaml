@@ -1,0 +1,119 @@
+# VCD + AGLA Combined Method - Default Parameters Configuration
+
+# Model Configuration
+model:
+  name: "llava-v1.5-7b"
+  path: "/path/to/llava-v1.5-7b"  # Update this path
+  base: null
+  conv_mode: "llava_v1"
+
+# Generation Configuration
+generation:
+  temperature: 1.0
+  max_new_tokens: 1024
+  do_sample: true
+  use_cache: true
+
+# VCD Parameters
+vcd:
+  enabled: true
+  noise_step: 500        # Noise step (0-999), higher = more noise
+  cd_alpha: 1.0          # Contrast strength (0.5-1.5)
+  cd_beta: 0.1           # Plausibility threshold (0.05-0.2)
+  
+  # Parameter descriptions:
+  # - noise_step: Controls the amount of diffusion noise added
+  #   * 300-500: Light noise, preserves more visual information
+  #   * 500-700: Medium noise, balanced trade-off
+  #   * 700-900: Heavy noise, stronger suppression
+  #
+  # - cd_alpha: Controls VCD contrast strength
+  #   * 0.5: Conservative, less suppression
+  #   * 1.0: Balanced (recommended)
+  #   * 1.5: Aggressive, more suppression
+  #
+  # - cd_beta: Controls plausibility constraint
+  #   * 0.05: Strict, filters more tokens
+  #   * 0.1: Balanced (recommended)
+  #   * 0.2: Loose, filters fewer tokens
+
+# AGLA Parameters
+agla:
+  enabled: true
+  agla_alpha: 1.0        # Enhancement strength (0.5-1.5)
+  agla_beta: 0.5         # Plausibility threshold (0.3-0.7)
+  
+  # Parameter descriptions:
+  # - agla_alpha: Controls AGLA enhancement strength
+  #   * 0.5: Conservative, less enhancement
+  #   * 1.0: Balanced (recommended)
+  #   * 1.5: Aggressive, more enhancement
+  #
+  # - agla_beta: Controls plausibility constraint
+  #   * 0.3: Strict, filters more tokens
+  #   * 0.5: Balanced (recommended)
+  #   * 0.7: Loose, filters fewer tokens
+
+# Evaluation Configuration
+evaluation:
+  datasets:
+    - name: "POPE_COCO"
+      question_file: "/path/to/pope_coco.jsonl"
+      image_folder: "/path/to/coco/val2014"
+      answers_file: "output/pope_coco_combined.jsonl"
+    
+    - name: "POPE_AOKVQA"
+      question_file: "/path/to/pope_aokvqa.jsonl"
+      image_folder: "/path/to/aokvqa/images"
+      answers_file: "output/pope_aokvqa_combined.jsonl"
+    
+    - name: "Hallucinogen"
+      question_file: "/path/to/hallucinogen.jsonl"
+      image_folder: "/path/to/hallucinogen/images"
+      answers_file: "output/hallucinogen_combined.jsonl"
+
+# Recommended Parameter Combinations
+
+# Conservative Strategy (Prioritize Precision)
+conservative:
+  vcd:
+    cd_alpha: 0.5
+    cd_beta: 0.2
+    noise_step: 300
+  agla:
+    agla_alpha: 0.5
+    agla_beta: 0.7
+
+# Balanced Strategy (Recommended)
+balanced:
+  vcd:
+    cd_alpha: 1.0
+    cd_beta: 0.1
+    noise_step: 500
+  agla:
+    agla_alpha: 1.0
+    agla_beta: 0.5
+
+# Aggressive Strategy (Prioritize Recall)
+aggressive:
+  vcd:
+    cd_alpha: 1.5
+    cd_beta: 0.05
+    noise_step: 700
+  agla:
+    agla_alpha: 1.5
+    agla_beta: 0.3
+
+# Hardware Configuration
+hardware:
+  num_gpus: 1
+  gpu_memory_required: "24GB"  # Minimum recommended
+  batch_size: 1
+  use_fp16: true
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  save_logs: true
+  log_file: "logs/combined_evaluation.log"
+
