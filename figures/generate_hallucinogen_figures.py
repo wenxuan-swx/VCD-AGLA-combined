@@ -257,71 +257,89 @@ def generate_error_reduction_hallucinogen():
     plt.close()
 
 def generate_pr_scatter_hallucinogen():
-    """Generate precision-recall scatter plot for Hallucinogen (matching POPE style)"""
-    # Data from table for all models on Identification task
+    """Generate precision-recall scatter plot for all 4 Hallucinogen subsets (matching POPE style)"""
+    # Data from tables for all models on all 4 Hallucinogen tasks
     # Only show Baseline and Combined for consistency with POPE figure
-    data_points = {
-        'LLaVA-1.5': {
-            'Baseline': (70.78, 90.83),
-            'Combined': (85.30, 85.30)
+    # Format: (Recall, Precision)
+    data_all_tasks = {
+        'Identification': {
+            'LLaVA-1.5': {'Baseline': (70.78, 90.83), 'Combined': (85.30, 85.30)},
+            'LLaVA-1.6': {'Baseline': (57.79, 92.71), 'Combined': (80.57, 80.57)},
+            'Qwen-VL': {'Baseline': (68.83, 94.64), 'Combined': (85.80, 85.80)}
         },
-        'LLaVA-1.6': {
-            'Baseline': (57.79, 92.71),
-            'Combined': (80.57, 80.57)
+        'Localization': {
+            'LLaVA-1.5': {'Baseline': (75.82, 87.22), 'Combined': (85.30, 85.30)},
+            'LLaVA-1.6': {'Baseline': (56.21, 89.58), 'Combined': (80.57, 80.57)},
+            'Qwen-VL': {'Baseline': (69.93, 94.69), 'Combined': (85.80, 85.80)}
         },
-        'Qwen-VL': {
-            'Baseline': (68.83, 94.64),
-            'Combined': (85.80, 85.80)
+        'Visual Context': {
+            'LLaVA-1.5': {'Baseline': (70.63, 92.62), 'Combined': (85.30, 85.30)},
+            'LLaVA-1.6': {'Baseline': (61.25, 93.33), 'Combined': (80.57, 80.57)},
+            'Qwen-VL': {'Baseline': (74.38, 95.20), 'Combined': (85.80, 85.80)}
+        },
+        'Counterfactual': {
+            'LLaVA-1.5': {'Baseline': (72.34, 88.70), 'Combined': (85.30, 85.30)},
+            'LLaVA-1.6': {'Baseline': (63.12, 93.68), 'Combined': (80.57, 80.57)},
+            'Qwen-VL': {'Baseline': (76.60, 97.30), 'Combined': (85.36, 85.36)}
         }
     }
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    # Create 2x2 subplot layout (matching POPE's 1x2 approach but for 4 subsets)
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+    axes = axes.flatten()
 
     # Use same colors as POPE figure
     colors = {'LLaVA-1.5': '#e74c3c', 'LLaVA-1.6': '#3498db', 'Qwen-VL': '#2ecc71'}
     model_names = {'LLaVA-1.5': 'LLaVA-1.5', 'LLaVA-1.6': 'LLaVA-1.6', 'Qwen-VL': 'Qwen-VL'}
 
-    # Plot baseline points
-    for model_key, color in colors.items():
-        recall, precision = data_points[model_key]['Baseline']
-        ax.scatter(recall, precision, s=100, c=color, marker='o', alpha=0.6,
-                  label=f"{model_names[model_key]} Baseline")
+    tasks = ['Identification', 'Localization', 'Visual Context', 'Counterfactual']
 
-    # Plot combined points
-    for model_key, color in colors.items():
-        recall, precision = data_points[model_key]['Combined']
-        ax.scatter(recall, precision, s=100, c=color, marker='*', alpha=0.9,
-                  label=f"{model_names[model_key]} VCD+AGLA")
+    for idx, task in enumerate(tasks):
+        ax = axes[idx]
+        data_points = data_all_tasks[task]
 
-    # Draw arrows showing improvement
-    for model_key, color in colors.items():
-        baseline_recall, baseline_prec = data_points[model_key]['Baseline']
-        combined_recall, combined_prec = data_points[model_key]['Combined']
-        ax.annotate('', xy=(combined_recall, combined_prec),
-                   xytext=(baseline_recall, baseline_prec),
-                   arrowprops=dict(arrowstyle='->', color=color, lw=1.5, alpha=0.5))
+        # Plot baseline points
+        for model_key, color in colors.items():
+            recall, precision = data_points[model_key]['Baseline']
+            ax.scatter(recall, precision, s=100, c=color, marker='o', alpha=0.6,
+                      label=f"{model_names[model_key]} Baseline" if idx == 0 else "")
 
-    # Add F1 iso-curves (matching POPE figure style)
-    recall_range = np.linspace(50, 100, 100)
-    for f1 in [70, 75, 80, 85, 90]:
-        precision_curve = f1 * recall_range / (2 * recall_range - f1)
-        # Only plot valid range
-        valid_idx = (precision_curve >= 50) & (precision_curve <= 100)
-        ax.plot(recall_range[valid_idx], precision_curve[valid_idx],
-               'k--', alpha=0.2, linewidth=0.5)
-        # Add F1 label
-        if np.any(valid_idx):
-            mid_idx = np.where(valid_idx)[0][len(np.where(valid_idx)[0])//2]
-            ax.text(recall_range[mid_idx], precision_curve[mid_idx],
-                   f'F1={f1}', fontsize=7, alpha=0.4, rotation=-45)
+        # Plot combined points
+        for model_key, color in colors.items():
+            recall, precision = data_points[model_key]['Combined']
+            ax.scatter(recall, precision, s=100, c=color, marker='*', alpha=0.9,
+                      label=f"{model_names[model_key]} VCD+AGLA" if idx == 0 else "")
 
-    ax.set_xlabel('Recall (%)')
-    ax.set_ylabel('Precision (%)')
-    ax.set_title('Hallucinogen Identification')
-    ax.legend(loc='lower left', fontsize=7, ncol=2)
-    ax.grid(True, alpha=0.3)
-    ax.set_xlim([55, 90])
-    ax.set_ylim([75, 102])
+        # Draw arrows showing improvement
+        for model_key, color in colors.items():
+            baseline_recall, baseline_prec = data_points[model_key]['Baseline']
+            combined_recall, combined_prec = data_points[model_key]['Combined']
+            ax.annotate('', xy=(combined_recall, combined_prec),
+                       xytext=(baseline_recall, baseline_prec),
+                       arrowprops=dict(arrowstyle='->', color=color, lw=1.5, alpha=0.5))
+
+        # Add F1 iso-curves (matching POPE figure style)
+        recall_range = np.linspace(50, 100, 100)
+        for f1 in [70, 75, 80, 85, 90]:
+            precision_curve = f1 * recall_range / (2 * recall_range - f1)
+            # Only plot valid range
+            valid_idx = (precision_curve >= 50) & (precision_curve <= 100)
+            ax.plot(recall_range[valid_idx], precision_curve[valid_idx],
+                   'k--', alpha=0.2, linewidth=0.5)
+            # Add F1 label
+            if np.any(valid_idx):
+                mid_idx = np.where(valid_idx)[0][len(np.where(valid_idx)[0])//2]
+                ax.text(recall_range[mid_idx], precision_curve[mid_idx],
+                       f'F1={f1}', fontsize=7, alpha=0.4, rotation=-45)
+
+        ax.set_xlabel('Recall (%)')
+        ax.set_ylabel('Precision (%)')
+        ax.set_title(task)
+        if idx == 0:  # Only show legend on first subplot
+            ax.legend(loc='lower left', fontsize=7, ncol=2)
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim([55, 90])
+        ax.set_ylim([75, 102])
 
     plt.tight_layout()
     plt.savefig('pr_scatter_hallucinogen.pdf', dpi=300, bbox_inches='tight')

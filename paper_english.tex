@@ -586,14 +586,14 @@ This error analysis reveals task-specific complementarity: on Hallucinogen's Ide
 
 \subsubsection{Precision-Recall Trade-off on Hallucinogen}
 
-Figure~\ref{fig:pr_curve_hallucinogen} shows precision-recall scatter plots for all methods on Hallucinogen Identification task. VCD+AGLA achieves excellent balance with 85.30\% precision and 85.30\% recall. The arrows indicate the improvement direction from baseline to VCD+AGLA, showing substantial movement toward the optimal upper-right region of the precision-recall space.
+Figure~\ref{fig:pr_curve_hallucinogen} shows precision-recall scatter plots for all four Hallucinogen task types across all three models. VCD+AGLA consistently achieves excellent balance across all tasks, with precision and recall both reaching 85.30\% for LLaVA-1.5, 80.57\% for LLaVA-1.6, and 85.80\% for Qwen-VL (85.36\% for Counterfactual). The arrows indicate the improvement direction from baseline to VCD+AGLA, showing substantial movement toward the optimal upper-right region of the precision-recall space across all task types. Notably, LLaVA-1.6 shows the most dramatic improvement, moving from highly imbalanced baseline performance (high precision, low recall) to well-balanced combined performance.
 
-\begin{figure}[htbp]
+\begin{figure*}[htbp]
 \centering
-\includegraphics[width=\columnwidth]{figures/pr_scatter_hallucinogen.pdf}
-\caption{Precision-recall scatter plot comparison on Hallucinogen Identification task. Arrows show improvement from baseline to VCD+AGLA. F1 iso-curves are shown as dashed lines. VCD+AGLA achieves superior balance, particularly for LLaVA-1.6.}
+\includegraphics[width=\textwidth]{figures/pr_scatter_hallucinogen.pdf}
+\caption{Precision-recall scatter plot comparison across all four Hallucinogen task types (Identification, Localization, Visual Context, Counterfactual). Arrows show improvement from baseline to VCD+AGLA for each model. F1 iso-curves are shown as dashed lines. VCD+AGLA achieves superior balance across all tasks, with particularly dramatic improvements for LLaVA-1.6.}
 \label{fig:pr_curve_hallucinogen}
-\end{figure}
+\end{figure*}
 
 \FloatBarrier
 
