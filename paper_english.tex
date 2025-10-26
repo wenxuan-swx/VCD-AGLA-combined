@@ -44,11 +44,11 @@ Large Vision-Language Models (LVLMs) have demonstrated remarkable capabilities i
 
 Large Vision-Language Models (LVLMs) such as LLaVA~\cite{liu2023llava}, Qwen-VL~\cite{bai2023qwenvl}, and GPT-4V~\cite{openai2023gpt4v} have achieved impressive performance on various multimodal tasks by aligning visual encoders with large language models (LLMs). However, these models frequently suffer from \textit{object hallucination}---the tendency to generate confident descriptions of objects that are not present in the input image~\cite{li2023pope,liu2023hallucinogen}. This phenomenon poses significant challenges for deploying LVLMs in safety-critical applications such as medical diagnosis, autonomous driving, and content moderation.
 
-Recent research has identified two primary sources of hallucinations in LVLMs: (1) \textit{statistical bias} from language priors learned during pre-training, causing models to predict frequently co-occurring objects regardless of visual evidence~\cite{leng2024vcd}, and (2) \textit{insufficient visual grounding}, where models fail to adequately attend to relevant image regions when generating responses~\cite{sun2024agla}. To address these issues, two complementary approaches have been proposed:
+Recent research has identified two primary sources of hallucinations in LVLMs: (1) \textit{statistical bias} from language priors learned during pre-training, causing models to predict frequently co-occurring objects regardless of visual evidence~\cite{leng2024vcd}, and (2) \textit{insufficient visual grounding}, where models fail to adequately attend to relevant image regions when generating responses~\cite{an2024agla}. To address these issues, two complementary approaches have been proposed:
 
 \textbf{Visual Contrastive Decoding (VCD)}~\cite{leng2024vcd} mitigates hallucinations by contrasting the output distributions of the original image with a noise-corrupted version. By subtracting the logits from the noisy image, VCD suppresses tokens that are likely to be generated from language priors rather than visual evidence. This approach has shown effectiveness in reducing false positive predictions.
 
-\textbf{Attention-Guided Language Augmentation (AGLA)}~\cite{sun2024agla} enhances visual grounding by using an auxiliary image-text matching model to identify question-relevant image regions via GradCAM~\cite{selvaraju2017gradcam}. By masking irrelevant regions and amplifying the contribution of the augmented image, AGLA strengthens the model's reliance on visual evidence, thereby reducing false negative predictions.
+\textbf{Attention-Guided Language Augmentation (AGLA)}~\cite{an2024agla} enhances visual grounding by using an auxiliary image-text matching model to identify question-relevant image regions via GradCAM~\cite{selvaraju2017gradcam}. By masking irrelevant regions and amplifying the contribution of the augmented image, AGLA strengthens the model's reliance on visual evidence, thereby reducing false negative predictions.
 
 While both methods have demonstrated individual success, they operate through fundamentally different mechanisms: VCD applies a \textit{negative constraint} by suppressing hallucinated content, whereas AGLA provides a \textit{positive enhancement} by strengthening visual grounding. This observation motivates our central research question:
 
@@ -97,7 +97,7 @@ Recent approaches to mitigating hallucinations can be categorized into several g
 
 \textbf{Visual Contrastive Decoding (VCD)}~\cite{leng2024vcd} introduces noise to the visual input and contrasts the output distributions. The key insight is that hallucinations driven by language priors should be relatively invariant to visual noise, while genuine visual information should be affected. By subtracting the noisy distribution from the original, VCD suppresses language-prior-driven hallucinations.
 
-\textbf{Attention-Guided Language Augmentation (AGLA)}~\cite{sun2024agla} uses an auxiliary BLIP-ITM model~\cite{li2022blip} to compute attention maps via GradCAM. These maps identify question-relevant regions, which are then used to create an augmented image by masking irrelevant areas. Adding the augmented image's contribution enhances visual grounding.
+\textbf{Attention-Guided Language Augmentation (AGLA)}~\cite{an2024agla} uses an auxiliary BLIP-ITM model~\cite{li2022blip} to compute attention maps via GradCAM. These maps identify question-relevant regions, which are then used to create an augmented image by masking irrelevant areas. Adding the augmented image's contribution enhances visual grounding.
 
 \subsection{Contrastive Decoding Frameworks}
 
@@ -149,7 +149,7 @@ where $\beta_{\text{vcd}} \in (0, 1)$ is a threshold parameter.
 
 \subsection{Attention-Guided Language Augmentation (AGLA)}
 
-AGLA~\cite{sun2024agla} enhances visual grounding by identifying and emphasizing question-relevant image regions using an auxiliary image-text matching (ITM) model.
+AGLA~\cite{an2024agla} enhances visual grounding by identifying and emphasizing question-relevant image regions using an auxiliary image-text matching (ITM) model.
 
 \textbf{Attention Map Computation.} Given image $\mathbf{I}$ and question $\mathbf{q}$, AGLA uses a pre-trained BLIP-ITM model $\mathcal{M}_{\text{ITM}}$ to compute GradCAM attention maps:
 
