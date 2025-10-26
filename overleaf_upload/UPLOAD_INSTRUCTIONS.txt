@@ -16,12 +16,21 @@ Overleaf 上传说明
 -------------------
 将 figures/ 文件夹中的所有 PDF 文件上传到 Overleaf 的 figures/ 文件夹中：
 
-必需的图片文件（5个）：
+必需的图片文件（10个）：
+
+POPE 基准测试图片：
 1. f1_comparison_by_model.pdf          - 图1: F1分数对比（按模型）
 2. improvement_heatmap.pdf             - 图2: 改进热力图
 3. confusion_matrix_comparison_llava15_coco.pdf - 图3: 混淆矩阵对比
 4. error_reduction_llava15_coco.pdf    - 图4: 错误减少分析
 5. pr_scatter_comparison.pdf           - 图5: 精确率-召回率散点图
+
+Hallucinogen 基准测试图片（新增）：
+6. f1_comparison_hallucinogen.pdf      - 图6: F1分数对比（Hallucinogen）
+7. improvement_heatmap_hallucinogen.pdf - 图7: 改进热力图（Hallucinogen）
+8. confusion_matrix_comparison_hallucinogen.pdf - 图8: 混淆矩阵对比（Hallucinogen）
+9. error_reduction_hallucinogen.pdf    - 图9: 错误减少分析（Hallucinogen）
+10. pr_scatter_hallucinogen.pdf        - 图10: 精确率-召回率散点图（Hallucinogen）
 
 步骤 4: 编译论文
 ---------------
@@ -44,11 +53,40 @@ project_root/
     ├── improvement_heatmap.pdf
     ├── confusion_matrix_comparison_llava15_coco.pdf
     ├── error_reduction_llava15_coco.pdf
-    └── pr_scatter_comparison.pdf
+    ├── pr_scatter_comparison.pdf
+    ├── f1_comparison_hallucinogen.pdf
+    ├── improvement_heatmap_hallucinogen.pdf
+    ├── confusion_matrix_comparison_hallucinogen.pdf
+    ├── error_reduction_hallucinogen.pdf
+    └── pr_scatter_hallucinogen.pdf
 
 如果遇到问题：
 -------------
 - 检查文件路径是否正确
 - 确认所有文件都已成功上传
 - 查看 Overleaf 的编译日志以获取详细错误信息
+
+重要更新说明（2025-10-26）：
+============================
+1. Section 5 "Results and Analysis" 已完全重写
+   - POPE 和 Hallucinogen 基准测试现在具有完全平行的结构
+   - 两个基准测试都有相同深度的分析和可视化
+   - 新增了 Cross-Benchmark Analysis 小节
+
+2. 新增了 5 个 Hallucinogen 基准测试的可视化图表
+   - F1 对比图、改进热力图、混淆矩阵、错误减少分析、PR 散点图
+
+3. 修正了 AGLA 论文的引用信息
+   - 作者从 Sun, Hanchao 等人改为 An, Wenbin 等人
+   - 标题更新为正确的 "Assembly of Global and Local Attention"
+   - 会议更新为 CVPR 2025
+
+4. 改进了 LaTeX 浮动体控制
+   - 添加了 float 和 placeins 包
+   - 优化了浮动体放置参数
+   - 使用 \FloatBarrier 确保图表正确定位
+
+5. 更新了 Discussion 和 Conclusion 部分
+   - 现在同时引用两个基准测试的结果
+   - 提供了更全面的跨基准测试分析
 
