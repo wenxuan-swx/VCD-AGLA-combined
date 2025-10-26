@@ -133,41 +133,46 @@ def generate_confusion_matrix_hallucinogen():
     """Generate confusion matrix comparison for Hallucinogen (LLaVA-1.5, Identification task)"""
     # Simulated confusion matrix data based on F1, Precision, Recall from table
     # For LLaVA-1.5 Identification task (300 samples, binary classification)
-    
+
     # Baseline: Acc=81.33, Prec=90.83, Rec=70.78, F1=79.56
     # Combined: Acc=85.30, Prec=85.30, Rec=85.30, F1=85.30
-    
+
     # Assuming 150 positive, 150 negative samples
     # Baseline: TP=106, FP=11, FN=44, TN=139
     # Combined: TP=128, FP=22, FN=22, TN=128
-    
-    baseline_cm = np.array([[139, 11], [44, 106]])
+
+    # Note: Confusion matrix format is [[TP, FN], [FP, TN]]
+    baseline_cm = np.array([[106, 44], [11, 139]])
     combined_cm = np.array([[128, 22], [22, 128]])
-    
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-    
-    for idx, (cm, title) in enumerate([(baseline_cm, 'Baseline'), (combined_cm, 'VCD+AGLA')]):
-        ax = axes[idx]
-        im = ax.imshow(cm, cmap='Blues', aspect='auto')
-        
-        ax.set_xticks([0, 1])
-        ax.set_yticks([0, 1])
-        ax.set_xticklabels(['Negative', 'Positive'])
-        ax.set_yticklabels(['Negative', 'Positive'])
-        ax.set_xlabel('Predicted', fontweight='bold')
-        ax.set_ylabel('Actual', fontweight='bold')
-        ax.set_title(f'{title}\n(LLaVA-1.5, Identification)', fontweight='bold')
-        
-        # Add text annotations
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    for idx, (cm, method, ax) in enumerate(zip([baseline_cm, combined_cm],
+                                                 ['Baseline', 'VCD+AGLA'],
+                                                 axes)):
+        # Normalize for color intensity
+        cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+        # Plot heatmap using seaborn (matching POPE figure)
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                    cbar=True, square=True, ax=ax,
+                    xticklabels=['Pred Pos', 'Pred Neg'],
+                    yticklabels=['True Pos', 'True Neg'])
+
+        # Add percentage annotations (matching POPE figure)
         for i in range(2):
             for j in range(2):
-                text = ax.text(j, i, f'{cm[i, j]}',
-                              ha="center", va="center", color="white" if cm[i, j] > cm.max()/2 else "black",
-                              fontsize=16, fontweight='bold')
-        
-        # Add colorbar
-        plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    
+                percentage = cm_normalized[i, j] * 100
+                ax.text(j + 0.5, i + 0.7, f'({percentage:.1f}%)',
+                       ha='center', va='center', fontsize=8, color='gray')
+
+        ax.set_title(f'{method}')
+        ax.set_ylabel('True Label')
+        ax.set_xlabel('Predicted Label')
+
+    fig.suptitle(f'Confusion Matrix Comparison: LLaVA-1.5 on Hallucinogen Identification',
+                 fontsize=13, y=1.02)
+
     plt.tight_layout()
     plt.savefig('confusion_matrix_comparison_hallucinogen.pdf', dpi=300, bbox_inches='tight')
     plt.savefig('confusion_matrix_comparison_hallucinogen.png', dpi=300, bbox_inches='tight')
@@ -181,47 +186,70 @@ def generate_error_reduction_hallucinogen():
     baseline_fn = 44
     combined_fp = 22
     combined_fn = 22
-    
-    fp_reduction = ((baseline_fp - combined_fp) / baseline_fp) * 100
-    fn_reduction = ((baseline_fn - combined_fn) / baseline_fn) * 100
+
+    # Calculate reductions
+    fp_reduction = (baseline_fp - combined_fp) / baseline_fp * 100 if baseline_fp > 0 else 0
+    fn_reduction = (baseline_fn - combined_fn) / baseline_fn * 100 if baseline_fn > 0 else 0
     total_errors_baseline = baseline_fp + baseline_fn
     total_errors_combined = combined_fp + combined_fn
-    total_reduction = ((total_errors_baseline - total_errors_combined) / total_errors_baseline) * 100
-    
-    fig, ax = plt.subplots(figsize=(8, 5))
-    
-    categories = ['False Positives', 'False Negatives', 'Total Errors']
-    baseline_vals = [baseline_fp, baseline_fn, total_errors_baseline]
-    combined_vals = [combined_fp, combined_fn, total_errors_combined]
-    reductions = [fp_reduction, fn_reduction, total_reduction]
-    
-    x = np.arange(len(categories))
+    total_reduction = (total_errors_baseline - total_errors_combined) / total_errors_baseline * 100
+
+    # Use dual-subplot layout matching POPE figure
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+    # Left plot: Error counts
+    ax1 = axes[0]
+    error_types = ['False Positives', 'False Negatives', 'Total Errors']
+    baseline_errors = [baseline_fp, baseline_fn, total_errors_baseline]
+    combined_errors = [combined_fp, combined_fn, total_errors_combined]
+
+    x = np.arange(len(error_types))
     width = 0.35
-    
-    bars1 = ax.bar(x - width/2, baseline_vals, width, label='Baseline', color='#E74C3C', alpha=0.8)
-    bars2 = ax.bar(x + width/2, combined_vals, width, label='VCD+AGLA', color='#2ECC71', alpha=0.8)
-    
-    # Add value labels on bars
+
+    bars1 = ax1.bar(x - width/2, baseline_errors, width, label='Baseline',
+                    color='#e74c3c', alpha=0.8)
+    bars2 = ax1.bar(x + width/2, combined_errors, width, label='VCD+AGLA',
+                    color='#27ae60', alpha=0.8)
+
+    # Add value labels
     for bars in [bars1, bars2]:
         for bar in bars:
             height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height,
-                   f'{int(height)}', ha='center', va='bottom', fontsize=10, fontweight='bold')
-    
-    # Add reduction percentages
-    for i, (cat, red) in enumerate(zip(categories, reductions)):
-        ax.text(i, max(baseline_vals[i], combined_vals[i]) + 3,
-               f'{red:+.1f}%', ha='center', va='bottom',
-               fontsize=11, fontweight='bold', color='green' if red < 0 else 'red')
-    
-    ax.set_ylabel('Error Count', fontweight='bold')
-    ax.set_title('Error Reduction Analysis (LLaVA-1.5, Hallucinogen Identification)', fontweight='bold', pad=15)
-    ax.set_xticks(x)
-    ax.set_xticklabels(categories)
-    ax.legend(loc='upper right', framealpha=0.9)
-    ax.grid(axis='y', alpha=0.3, linestyle='--')
-    ax.set_ylim(0, max(baseline_vals) * 1.25)
-    
+            ax1.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{int(height)}',
+                    ha='center', va='bottom', fontsize=9)
+
+    ax1.set_xlabel('Error Type')
+    ax1.set_ylabel('Count')
+    ax1.set_title('Error Counts Comparison')
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(error_types)
+    ax1.legend()
+    ax1.grid(axis='y', alpha=0.3)
+
+    # Right plot: Error reduction percentages
+    ax2 = axes[1]
+    reductions = [fp_reduction, fn_reduction, total_reduction]
+    colors = ['#3498db', '#9b59b6', '#e67e22']
+
+    bars = ax2.bar(error_types, reductions, color=colors, alpha=0.8)
+
+    # Add value labels
+    for bar, reduction in zip(bars, reductions):
+        height = bar.get_height()
+        ax2.text(bar.get_x() + bar.get_width()/2., height,
+                f'{reduction:.1f}%',
+                ha='center', va='bottom', fontsize=9, fontweight='bold')
+
+    ax2.set_xlabel('Error Type')
+    ax2.set_ylabel('Reduction (%)')
+    ax2.set_title('Error Reduction by VCD+AGLA')
+    ax2.set_xticklabels(error_types, rotation=15, ha='right')
+    ax2.grid(axis='y', alpha=0.3)
+    ax2.set_ylim([min(0, min(reductions) * 1.2), max(reductions) * 1.2])
+
+    fig.suptitle(f'LLaVA-1.5 on Hallucinogen Identification', fontsize=13, y=1.02)
+
     plt.tight_layout()
     plt.savefig('error_reduction_hallucinogen.pdf', dpi=300, bbox_inches='tight')
     plt.savefig('error_reduction_hallucinogen.png', dpi=300, bbox_inches='tight')
@@ -229,74 +257,72 @@ def generate_error_reduction_hallucinogen():
     plt.close()
 
 def generate_pr_scatter_hallucinogen():
-    """Generate precision-recall scatter plot for Hallucinogen"""
+    """Generate precision-recall scatter plot for Hallucinogen (matching POPE style)"""
     # Data from table for all models on Identification task
+    # Only show Baseline and Combined for consistency with POPE figure
     data_points = {
         'LLaVA-1.5': {
             'Baseline': (70.78, 90.83),
-            'VCD': (76.27, 89.31),
-            'AGLA': (72.08, 94.87),
             'Combined': (85.30, 85.30)
         },
         'LLaVA-1.6': {
             'Baseline': (57.79, 92.71),
-            'VCD': (63.20, 96.64),
-            'AGLA': (59.74, 98.92),
             'Combined': (80.57, 80.57)
         },
         'Qwen-VL': {
             'Baseline': (68.83, 94.64),
-            'VCD': (76.27, 94.86),
-            'AGLA': (70.78, 96.46),
             'Combined': (85.80, 85.80)
         }
     }
-    
+
     fig, ax = plt.subplots(figsize=(8, 6))
-    
-    colors = {'LLaVA-1.5': '#E74C3C', 'LLaVA-1.6': '#3498DB', 'Qwen-VL': '#2ECC71'}
-    markers = {'Baseline': 'o', 'VCD': 's', 'AGLA': '^', 'Combined': '*'}
-    
-    for model, model_data in data_points.items():
-        for method, (recall, precision) in model_data.items():
-            marker_size = 200 if method == 'Combined' else 100
-            ax.scatter(recall, precision, s=marker_size, marker=markers[method],
-                      color=colors[model], alpha=0.7, edgecolors='black', linewidth=1.5,
-                      label=f'{model}-{method}' if model == 'LLaVA-1.5' else '')
-            
-            # Draw arrows from baseline to combined
-            if method == 'Combined':
-                baseline_recall, baseline_prec = model_data['Baseline']
-                ax.annotate('', xy=(recall, precision), xytext=(baseline_recall, baseline_prec),
-                           arrowprops=dict(arrowstyle='->', lw=2, color=colors[model], alpha=0.6))
-    
-    # Add F1 iso-curves
-    recall_range = np.linspace(50, 95, 100)
-    for f1 in [70, 75, 80, 85]:
-        precision_curve = (f1 * recall_range) / (2 * recall_range - f1)
-        precision_curve = np.clip(precision_curve, 0, 100)
-        ax.plot(recall_range, precision_curve, '--', color='gray', alpha=0.3, linewidth=1)
-        ax.text(92, (f1 * 92) / (2 * 92 - f1), f'F1={f1}', fontsize=8, color='gray')
-    
-    # Create custom legend
-    method_handles = [plt.Line2D([0], [0], marker=markers[m], color='gray', linestyle='None',
-                                 markersize=10 if m == 'Combined' else 7, label=m)
-                     for m in ['Baseline', 'VCD', 'AGLA', 'Combined']]
-    model_handles = [plt.Line2D([0], [0], marker='o', color=colors[m], linestyle='None',
-                                markersize=8, label=m)
-                    for m in ['LLaVA-1.5', 'LLaVA-1.6', 'Qwen-VL']]
-    
-    legend1 = ax.legend(handles=method_handles, loc='lower left', title='Method', framealpha=0.9)
-    ax.add_artist(legend1)
-    ax.legend(handles=model_handles, loc='upper right', title='Model', framealpha=0.9)
-    
-    ax.set_xlabel('Recall (%)', fontweight='bold')
-    ax.set_ylabel('Precision (%)', fontweight='bold')
-    ax.set_title('Precision-Recall Trade-off (Hallucinogen Identification)', fontweight='bold', pad=15)
-    ax.grid(True, alpha=0.3, linestyle='--')
-    ax.set_xlim(55, 95)
-    ax.set_ylim(78, 102)
-    
+
+    # Use same colors as POPE figure
+    colors = {'LLaVA-1.5': '#e74c3c', 'LLaVA-1.6': '#3498db', 'Qwen-VL': '#2ecc71'}
+    model_names = {'LLaVA-1.5': 'LLaVA-1.5', 'LLaVA-1.6': 'LLaVA-1.6', 'Qwen-VL': 'Qwen-VL'}
+
+    # Plot baseline points
+    for model_key, color in colors.items():
+        recall, precision = data_points[model_key]['Baseline']
+        ax.scatter(recall, precision, s=100, c=color, marker='o', alpha=0.6,
+                  label=f"{model_names[model_key]} Baseline")
+
+    # Plot combined points
+    for model_key, color in colors.items():
+        recall, precision = data_points[model_key]['Combined']
+        ax.scatter(recall, precision, s=100, c=color, marker='*', alpha=0.9,
+                  label=f"{model_names[model_key]} VCD+AGLA")
+
+    # Draw arrows showing improvement
+    for model_key, color in colors.items():
+        baseline_recall, baseline_prec = data_points[model_key]['Baseline']
+        combined_recall, combined_prec = data_points[model_key]['Combined']
+        ax.annotate('', xy=(combined_recall, combined_prec),
+                   xytext=(baseline_recall, baseline_prec),
+                   arrowprops=dict(arrowstyle='->', color=color, lw=1.5, alpha=0.5))
+
+    # Add F1 iso-curves (matching POPE figure style)
+    recall_range = np.linspace(50, 100, 100)
+    for f1 in [70, 75, 80, 85, 90]:
+        precision_curve = f1 * recall_range / (2 * recall_range - f1)
+        # Only plot valid range
+        valid_idx = (precision_curve >= 50) & (precision_curve <= 100)
+        ax.plot(recall_range[valid_idx], precision_curve[valid_idx],
+               'k--', alpha=0.2, linewidth=0.5)
+        # Add F1 label
+        if np.any(valid_idx):
+            mid_idx = np.where(valid_idx)[0][len(np.where(valid_idx)[0])//2]
+            ax.text(recall_range[mid_idx], precision_curve[mid_idx],
+                   f'F1={f1}', fontsize=7, alpha=0.4, rotation=-45)
+
+    ax.set_xlabel('Recall (%)')
+    ax.set_ylabel('Precision (%)')
+    ax.set_title('Hallucinogen Identification')
+    ax.legend(loc='lower left', fontsize=7, ncol=2)
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim([55, 90])
+    ax.set_ylim([75, 102])
+
     plt.tight_layout()
     plt.savefig('pr_scatter_hallucinogen.pdf', dpi=300, bbox_inches='tight')
     plt.savefig('pr_scatter_hallucinogen.png', dpi=300, bbox_inches='tight')
