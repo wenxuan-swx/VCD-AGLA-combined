@@ -1,0 +1,54 @@
+Overleaf 上传说明
+==================
+
+您已经将 paper_english.tex 上传到 Overleaf。
+为了使图片和引用正常显示，请按以下步骤操作：
+
+步骤 1: 上传参考文献文件
+-----------------------
+将 references.bib 上传到 Overleaf 项目的根目录（与 paper_english.tex 同级）
+
+步骤 2: 创建 figures 文件夹
+--------------------------
+在 Overleaf 项目中创建一个名为 "figures" 的文件夹
+
+步骤 3: 上传图片文件
+-------------------
+将 figures/ 文件夹中的所有 PDF 文件上传到 Overleaf 的 figures/ 文件夹中：
+
+必需的图片文件（5个）：
+1. f1_comparison_by_model.pdf          - 图1: F1分数对比（按模型）
+2. improvement_heatmap.pdf             - 图2: 改进热力图
+3. confusion_matrix_comparison_llava15_coco.pdf - 图3: 混淆矩阵对比
+4. error_reduction_llava15_coco.pdf    - 图4: 错误减少分析
+5. pr_scatter_comparison.pdf           - 图5: 精确率-召回率散点图
+
+步骤 4: 编译论文
+---------------
+在 Overleaf 中点击 "Recompile" 按钮编译论文
+
+注意事项：
+---------
+1. 确保文件夹名称为 "figures"（小写）
+2. 确保所有 PDF 文件名与上述列表完全一致
+3. 如果编译时提示缺少某些 LaTeX 包，Overleaf 通常会自动安装
+4. 论文使用的是 plain 引用样式，会自动生成参考文献列表
+
+文件结构应该是：
+--------------
+project_root/
+├── paper_english.tex
+├── references.bib
+└── figures/
+    ├── f1_comparison_by_model.pdf
+    ├── improvement_heatmap.pdf
+    ├── confusion_matrix_comparison_llava15_coco.pdf
+    ├── error_reduction_llava15_coco.pdf
+    └── pr_scatter_comparison.pdf
+
+如果遇到问题：
+-------------
+- 检查文件路径是否正确
+- 确认所有文件都已成功上传
+- 查看 Overleaf 的编译日志以获取详细错误信息
+
