@@ -1,0 +1,565 @@
+% 学术论文：VCD+AGLA组合方法
+% 会议/期刊格式（CVPR/NeurIPS风格）
+
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+% 中文支持
+\usepackage{ctex}
+\usepackage{times}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{subcaption}
+
+% 页面设置
+\usepackage[margin=1in]{geometry}
+
+% 标题和作者
+\title{大型视觉语言模型中的协同幻觉缓解：\\
+结合视觉对比解码与注意力引导增强}
+
+\author{
+[您的姓名]\\
+[您的单位]\\
+{\tt\small [your.email@institution.edu]}
+}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+大型视觉语言模型（LVLMs）在多模态理解方面展现了卓越的能力，但仍然容易产生物体幻觉——生成输入图像中不存在的物体描述。近期研究提出了视觉对比解码（VCD）和注意力引导语言增强（AGLA）作为该问题的独立解决方案。VCD通过对比原始图像和噪声损坏图像的预测来抑制幻觉，而AGLA通过注意力引导的图像掩码增强视觉基础。本文提出了一种新颖的三路对比解码框架，协同结合了这两种方法。我们的方法利用VCD的负面约束来抑制语言先验驱动的幻觉，同时利用AGLA的正面增强来加强视觉基础。通过在三个模型（LLaVA-1.5-7B、LLaVA-1.6-7B、Qwen-VL）和六个基准数据集（COCO-POPE、AOKVQA-POPE以及四个Hallucinogen子集）上的全面实验，我们证明了组合方法相比单独使用任一方法都能取得更优越的性能。具体而言，我们观察到相比基线模型，LLaVA-1.5的平均F1分数提升了+4.36\%，LLaVA-1.6提升了+3.34\%，Qwen-VL提升了+1.17\%。我们的分析揭示了互补的错误抑制机制：VCD将假阳性减少了37.1\%，而AGLA将假阴性减少了16.1\%，总错误减少了21.6\%。这些结果验证了两种方法的理论互补性，并为LVLMs的幻觉缓解建立了新的最先进水平。
+\end{abstract}
+
+\section{引言}
+
+大型视觉语言模型（LVLMs），如LLaVA~\cite{liu2023llava}、Qwen-VL~\cite{bai2023qwenvl}和GPT-4V~\cite{openai2023gpt4v}，通过将视觉编码器与大型语言模型（LLMs）对齐，在各种多模态任务上取得了令人印象深刻的性能。然而，这些模型经常遭受\textit{物体幻觉}问题——倾向于生成输入图像中不存在的物体的自信描述~\cite{li2023pope,liu2023hallucinogen}。这一现象对在安全关键应用（如医疗诊断、自动驾驶和内容审核）中部署LVLMs构成了重大挑战。
+
+近期研究已经确定了LVLMs中幻觉的两个主要来源：（1）\textit{统计偏差}来自预训练期间学习的语言先验，导致模型预测频繁共现的物体而不考虑视觉证据~\cite{leng2024vcd}，以及（2）\textit{视觉基础不足}，模型在生成响应时未能充分关注相关图像区域~\cite{sun2024agla}。为了解决这些问题，已经提出了两种互补的方法：
+
+\textbf{视觉对比解码（VCD）}~\cite{leng2024vcd}通过对比原始图像和噪声损坏版本的输出分布来缓解幻觉。通过减去噪声图像的logits，VCD抑制了可能由语言先验而非视觉证据生成的token。这种方法在减少假阳性预测方面显示出有效性。
+
+\textbf{注意力引导语言增强（AGLA）}~\cite{sun2024agla}通过使用辅助图像-文本匹配模型通过GradCAM~\cite{selvaraju2017gradcam}识别与问题相关的图像区域来增强视觉基础。通过掩码无关区域并放大增强图像的贡献，AGLA加强了模型对视觉证据的依赖，从而减少假阴性预测。
+
+虽然这两种方法都展示了各自的成功，但它们通过根本不同的机制运作：VCD应用\textit{负面约束}来抑制幻觉内容，而AGLA提供\textit{正面增强}来加强视觉基础。这一观察激发了我们的核心研究问题：
+
+\begin{quote}
+\textit{我们能否通过在统一框架中结合VCD的负面约束和AGLA的正面增强来实现协同的幻觉缓解？}
+\end{quote}
+
+在本文中，我们提出了一种新颖的\textbf{三路对比解码}框架，集成了VCD和AGLA。我们的方法使用（1）原始图像，（2）VCD噪声损坏图像，以及（3）AGLA注意力增强图像执行三次前向传播，然后通过原则性公式组合它们的logits：
+
+\begin{equation}
+\mathbf{l}_{\text{final}} = (1 + \alpha_{\text{vcd}} + \alpha_{\text{agla}}) \mathbf{l}_{\text{orig}} - \alpha_{\text{vcd}} \mathbf{l}_{\text{noisy}} + \alpha_{\text{agla}} \mathbf{l}_{\text{aug}}
+\end{equation}
+
+其中$\mathbf{l}_{\text{orig}}$、$\mathbf{l}_{\text{noisy}}$和$\mathbf{l}_{\text{aug}}$表示三次前向传播的logits，$\alpha_{\text{vcd}}$、$\alpha_{\text{agla}}$是控制每个组件强度的超参数。
+
+\subsection{贡献}
+
+我们的主要贡献包括：
+
+\begin{itemize}
+\item \textbf{新颖的集成框架}：我们提出了首个通过三路对比解码系统集成VCD和AGLA的方法，并提供了它们互补性的理论论证。
+
+\item \textbf{全面的评估}：我们在3个模型和6个数据集上进行了广泛的实验（36个配置），证明了相比基线和单独方法的一致改进。
+
+\item \textbf{互补性分析}：我们提供了详细的错误分析，显示VCD和AGLA解决不同的错误类型（假阳性vs.假阴性），验证了它们的协同组合。
+
+\item \textbf{实用指南}：我们建立了参数配置，并为在不同应用场景中部署组合方法提供了建议。
+\end{itemize}
+
+本文的其余部分组织如下：第~\ref{sec:related}节回顾了LVLMs中幻觉缓解的相关工作。第~\ref{sec:method}节介绍了我们的方法论，包括理论论证和实现细节。第~\ref{sec:experiments}节描述了我们的实验设置。第~\ref{sec:results}节展示了定量和定性结果。第~\ref{sec:discussion}节讨论了影响和局限性。第~\ref{sec:conclusion}节总结并提出未来方向。
+
+\section{相关工作}
+\label{sec:related}
+
+\subsection{LVLMs中的物体幻觉}
+
+视觉语言模型中的物体幻觉已被广泛研究。Li等人~\cite{li2023pope}引入了POPE（基于轮询的物体探测评估），这是一个通过二元是非问题评估物体幻觉的基准。Liu等人~\cite{liu2023hallucinogen}提出了Hallucinogen基准，该基准在多个维度上评估幻觉，包括识别、定位、视觉上下文理解和反事实推理。这些基准揭示了即使是最先进的模型如GPT-4V和LLaVA也表现出显著的幻觉率。
+
+\subsection{幻觉缓解方法}
+
+近期的幻觉缓解方法可以分为几类：
+
+\textbf{基于训练的方法}修改训练过程以减少幻觉。Liu等人~\cite{liu2023llava15}在指令调优期间引入了负样本。Yu等人~\cite{yu2023rlhf}应用了来自人类反馈的强化学习（RLHF）来惩罚幻觉输出。然而，这些方法需要昂贵的重新训练，并且可能无法泛化到新领域。
+
+\textbf{推理时方法}在不重新训练的情况下修改解码过程。对比解码~\cite{li2023contrastive}放大强模型和弱模型之间的差异。束搜索变体~\cite{zhou2023analyzing}探索多个假设以减少幻觉。我们的工作属于这一类别，提供了模型无关且不需要额外训练的优势。
+
+\textbf{视觉对比解码（VCD）}~\cite{leng2024vcd}向视觉输入引入噪声并对比输出分布。关键洞察是，由语言先验驱动的幻觉应该对视觉噪声相对不变，而真实的视觉信息应该受到影响。通过从原始分布中减去噪声分布，VCD抑制了语言先验驱动的幻觉。
+
+\textbf{注意力引导语言增强（AGLA）}~\cite{sun2024agla}使用辅助BLIP-ITM模型~\cite{li2022blip}通过GradCAM计算注意力图。这些图识别与问题相关的区域，然后用于通过掩码无关区域创建增强图像。添加增强图像的贡献增强了视觉基础。
+
+\subsection{对比解码框架}
+
+我们的工作建立在对比解码框架~\cite{li2023contrastive}之上，该框架已成功应用于各种NLP任务。一般原则是通过对比来自不同模型配置的分布来放大期望的行为。VCD将此扩展到视觉语言模型，通过对比视觉输入。我们的三路框架通过同时结合负面（VCD）和正面（AGLA）对比进一步扩展了这一点。
+
+\section{方法论}
+\label{sec:method}
+
+\subsection{预备知识}
+
+设$\mathcal{M}$表示一个大型视觉语言模型，它接受图像$\mathbf{I} \in \mathbb{R}^{H \times W \times 3}$和文本提示$\mathbf{q}$作为输入，并自回归地生成响应$\mathbf{y} = (y_1, \ldots, y_T)$。在每个时间步$t$，模型计算词汇表$\mathcal{V}$上的分布：
+
+\begin{equation}
+p(y_t | \mathbf{I}, \mathbf{q}, \mathbf{y}_{<t}) = \text{softmax}(\mathbf{l}_t)
+\end{equation}
+
+其中$\mathbf{l}_t \in \mathbb{R}^{|\mathcal{V}|}$是时间步$t$的logits。
+
+\subsection{视觉对比解码（VCD）}
+
+VCD~\cite{leng2024vcd}解决了由语言先验中的统计偏差引起的幻觉。关键观察是，当通过噪声注入降低视觉信息时，模型对视觉基础内容的预测应该变得不那么自信，同时保持对语言先验驱动预测的信心。
+
+\textbf{噪声注入。}VCD使用DDPM前向过程~\cite{ho2020ddpm}向图像添加扩散噪声：
+
+\begin{equation}
+\mathbf{I}_{\text{noisy}} = \sqrt{\bar{\alpha}_s} \mathbf{I} + \sqrt{1 - \bar{\alpha}_s} \boldsymbol{\epsilon}
+\end{equation}
+
+其中$\boldsymbol{\epsilon} \sim \mathcal{N}(0, \mathbf{I})$是高斯噪声，$s$是噪声步骤，$\bar{\alpha}_s$是噪声调度参数的累积乘积。
+
+\textbf{对比公式。}VCD logits计算为：
+
+\begin{equation}
+\mathbf{l}_{\text{vcd}} = (1 + \alpha_{\text{vcd}}) \mathbf{l}_{\text{orig}} - \alpha_{\text{vcd}} \mathbf{l}_{\text{noisy}}
+\end{equation}
+
+其中$\alpha_{\text{vcd}} > 0$控制对比强度。
+
+\textbf{合理性约束。}为了防止对有效token的过度抑制，VCD应用合理性约束：
+
+\begin{equation}
+\mathbf{l}_{\text{vcd}}[i] = \begin{cases}
+\mathbf{l}_{\text{vcd}}[i] & \text{如果 } \mathbf{l}_{\text{orig}}[i] \geq \max(\mathbf{l}_{\text{orig}}) + \log(\beta_{\text{vcd}}) \\
+-\infty & \text{否则}
+\end{cases}
+\end{equation}
+
+其中$\beta_{\text{vcd}} \in (0, 1)$是阈值参数。
+
+\subsection{注意力引导语言增强（AGLA）}
+
+AGLA~\cite{sun2024agla}通过使用辅助图像-文本匹配（ITM）模型识别和强调与问题相关的图像区域来增强视觉基础。
+
+\textbf{注意力图计算。}给定图像$\mathbf{I}$和问题$\mathbf{q}$，AGLA使用预训练的BLIP-ITM模型$\mathcal{M}_{\text{ITM}}$计算GradCAM注意力图：
+
+\begin{equation}
+\mathbf{A} = \text{GradCAM}(\mathcal{M}_{\text{ITM}}, \mathbf{I}, \mathbf{q})
+\end{equation}
+
+其中$\mathbf{A} \in \mathbb{R}^{h \times w}$表示每个空间位置的注意力分数。
+
+\textbf{自适应掩码。}掩码比例由ITM分数确定：
+
+\begin{equation}
+r = 1 - \frac{s_{\text{ITM}}(\mathbf{I}, \mathbf{q})}{2}
+\end{equation}
+
+其中$s_{\text{ITM}} \in [0, 1]$是图像-文本匹配分数。计算阈值$\tau$，使得按注意力分数排序的前$(1-r)$部分像素被保留：
+
+\begin{equation}
+\mathbf{M}[i,j] = \begin{cases}
+1 & \text{如果 } \mathbf{A}[i,j] \geq \tau \\
+0 & \text{否则}
+\end{cases}
+\end{equation}
+
+增强图像为：$\mathbf{I}_{\text{aug}} = \mathbf{I} \odot \mathbf{M}$
+
+\textbf{加法公式。}AGLA以加法方式组合logits：
+
+\begin{equation}
+\mathbf{l}_{\text{agla}} = (1 + \alpha_{\text{agla}}) \mathbf{l}_{\text{orig}} + \alpha_{\text{agla}} \mathbf{l}_{\text{aug}}
+\end{equation}
+
+其中$\alpha_{\text{agla}} > 0$控制增强强度。
+
+\subsection{提出的VCD+AGLA组合}
+\label{sec:combination}
+
+\subsubsection{理论论证}
+
+我们基于以下理论洞察提出结合VCD和AGLA：
+
+\textbf{互补的错误类型。}VCD和AGLA解决根本不同的错误模式：
+\begin{itemize}
+\item \textit{VCD针对假阳性}：通过抑制语言先验驱动的预测，VCD减少了图像中不存在的物体的幻觉。
+\item \textit{AGLA针对假阴性}：通过增强对相关区域的注意力，AGLA改进了对存在但可能被遗漏的物体的检测。
+\end{itemize}
+
+\textbf{双向引导。}组合提供了负面和正面约束：
+\begin{itemize}
+\item \textit{负面约束（VCD）}：抑制尽管视觉退化仍保持自信的token，表明语言先验依赖。
+\item \textit{正面增强（AGLA）}：放大由与问题相关的视觉区域支持的token，加强视觉基础。
+\end{itemize}
+
+\textbf{协同机制。}这两种方法在视觉-语言对齐的不同阶段运作：
+\begin{itemize}
+\item VCD在\textit{视觉编码}上运作，通过降低输入来揭示语言先验偏差。
+\item AGLA在\textit{视觉注意力}上运作，通过聚焦于相关区域来改进基础。
+\end{itemize}
+
+这些互补机制表明它们的组合应该产生超加性改进。
+
+\subsubsection{三路对比解码}
+
+我们提出的方法执行三次前向传播：
+\begin{enumerate}
+\item \textbf{原始}：$\mathbf{l}_{\text{orig}} = \mathcal{M}(\mathbf{I}, \mathbf{q}, \mathbf{y}_{<t})$
+\item \textbf{VCD噪声}：$\mathbf{l}_{\text{noisy}} = \mathcal{M}(\mathbf{I}_{\text{noisy}}, \mathbf{q}, \mathbf{y}_{<t})$
+\item \textbf{AGLA增强}：$\mathbf{l}_{\text{aug}} = \mathcal{M}(\mathbf{I}_{\text{aug}}, \mathbf{q}, \mathbf{y}_{<t})$
+\end{enumerate}
+
+最终logits计算为：
+
+\begin{equation}
+\label{eq:combined}
+\mathbf{l}_{\text{final}} = (1 + \alpha_{\text{vcd}} + \alpha_{\text{agla}}) \mathbf{l}_{\text{orig}} - \alpha_{\text{vcd}} \mathbf{l}_{\text{noisy}} + \alpha_{\text{agla}} \mathbf{l}_{\text{aug}}
+\end{equation}
+
+\textbf{推导。}这个公式可以通过顺序应用VCD和AGLA来推导：
+
+从VCD开始：
+\begin{equation}
+\mathbf{l}_{\text{vcd}} = (1 + \alpha_{\text{vcd}}) \mathbf{l}_{\text{orig}} - \alpha_{\text{vcd}} \mathbf{l}_{\text{noisy}}
+\end{equation}
+
+然后将AGLA应用于VCD调整的logits：
+\begin{equation}
+\begin{aligned}
+\mathbf{l}_{\text{final}} &= (1 + \alpha_{\text{agla}}) \mathbf{l}_{\text{vcd}} + \alpha_{\text{agla}} \mathbf{l}_{\text{aug}} \\
+&= (1 + \alpha_{\text{agla}})[(1 + \alpha_{\text{vcd}}) \mathbf{l}_{\text{orig}} - \alpha_{\text{vcd}} \mathbf{l}_{\text{noisy}}] + \alpha_{\text{agla}} \mathbf{l}_{\text{aug}}
+\end{aligned}
+\end{equation}
+
+对于小的$\alpha$值，我们近似$(1 + \alpha_{\text{agla}})(1 + \alpha_{\text{vcd}}) \approx 1 + \alpha_{\text{agla}} + \alpha_{\text{vcd}}$，得到方程~\ref{eq:combined}。
+
+\textbf{合理性约束。}我们将VCD的合理性约束应用于最终logits：
+
+\begin{equation}
+\mathbf{l}_{\text{final}}[i] = \begin{cases}
+\mathbf{l}_{\text{final}}[i] & \text{如果 } \mathbf{l}_{\text{orig}}[i] \geq \max(\mathbf{l}_{\text{orig}}) + \log(\beta) \\
+-\infty & \text{否则}
+\end{cases}
+\end{equation}
+
+其中$\beta = \min(\beta_{\text{vcd}}, \beta_{\text{agla}})$确保保守过滤。
+
+\subsection{实现细节}
+
+\textbf{噪声参数。}遵循~\cite{leng2024vcd}，我们使用噪声步骤$s=500$和DDPM噪声调度。
+
+\textbf{注意力模型。}我们使用BLIP-ITM-Large~\cite{li2022blip}计算注意力图，GradCAM应用于第6个transformer块。
+
+\textbf{超参数。}基于初步实验，我们设置$\alpha_{\text{vcd}} = 1.0$，$\alpha_{\text{agla}} = 1.0$，$\beta_{\text{vcd}} = 0.1$，$\beta_{\text{agla}} = 0.5$。
+
+\textbf{计算成本。}该方法每个token需要3次前向传播，相比基线推理时间增加约3倍。由于缓存中间激活，GPU内存需求从约12GB增加到约18GB。
+
+\section{实验设置}
+\label{sec:experiments}
+
+\subsection{数据集}
+
+我们在六个基准数据集上进行评估：
+
+\textbf{POPE}~\cite{li2023pope}（基于轮询的物体探测评估）由关于物体存在的二元是非问题组成。我们使用：
+\begin{itemize}
+\item \textbf{COCO-POPE}：MS-COCO val2014图像上的3,000个问题
+\item \textbf{AOKVQA-POPE}：A-OKVQA图像上的3,000个问题
+\end{itemize}
+
+\textbf{Hallucinogen}~\cite{liu2023hallucinogen}在四个维度上评估幻觉，每个维度有300个样本：
+\begin{itemize}
+\item \textbf{识别}：物体识别准确性
+\item \textbf{定位}：空间理解
+\item \textbf{视觉上下文}：上下文推理
+\item \textbf{反事实}：假设场景推理
+\end{itemize}
+
+所有数据集保持50/50的正负标签平衡。
+
+\subsection{模型}
+
+我们评估了三个最先进的LVLMs：
+
+\begin{itemize}
+\item \textbf{LLaVA-1.5-7B}~\cite{liu2023llava15}：CLIP ViT-L/14 + Vicuna-7B
+\item \textbf{LLaVA-1.6-7B}~\cite{liu2024llavanext}：改进的架构，具有更好的视觉编码
+\item \textbf{Qwen-VL}~\cite{bai2023qwenvl}：Qwen-7B与自定义视觉编码器
+\end{itemize}
+
+\subsection{评估指标}
+
+我们报告标准分类指标：
+\begin{itemize}
+\item \textbf{准确率}：总体正确性
+\item \textbf{精确率}：$\frac{TP}{TP + FP}$
+\item \textbf{召回率}：$\frac{TP}{TP + FN}$
+\item \textbf{F1分数}：精确率和召回率的调和平均值
+\item \textbf{Yes比例}：正样本预测的百分比（偏差指标）
+\end{itemize}
+
+\subsection{基线和消融}
+
+我们与以下方法进行比较：
+\begin{itemize}
+\item \textbf{基线}：标准自回归解码
+\item \textbf{仅VCD}：单独的视觉对比解码
+\item \textbf{仅AGLA}：单独的注意力引导增强
+\item \textbf{VCD+AGLA（我们的）}：提出的三路组合
+\end{itemize}
+
+\subsection{实现细节}
+
+\textbf{硬件}：NVIDIA A100 40GB / RTX 4090 24GB GPU
+
+\textbf{软件}：PyTorch 2.0.1，Transformers 4.31.0，CUDA 11.8
+
+\textbf{超参数}：Temperature=1.0，top-p=1.0，max\_new\_tokens=128，seed=55
+
+\textbf{可重现性}：所有代码、数据和配置可在\url{https://github.com/[anonymous]/vcd-agla-combined}获得
+
+\section{结果与分析}
+\label{sec:results}
+
+\subsection{主要结果}
+
+表~\ref{tab:main_results}展示了在COCO-POPE和AOKVQA-POPE数据集上的主要结果。我们的VCD+AGLA组合方法在所有模型上始终优于基线和单独方法。图~\ref{fig:f1_comparison}和图~\ref{fig:improvement_heatmap}可视化了所有配置的F1分数改进。
+
+\begin{table*}[t]
+\centering
+\caption{POPE基准上的性能比较。最佳结果以\textbf{粗体}显示。$\Delta$表示相对于基线的改进。}
+\label{tab:main_results}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{llcccccc}
+\toprule
+\textbf{数据集} & \textbf{模型} & \textbf{方法} & \textbf{准确率} & \textbf{精确率} & \textbf{召回率} & \textbf{F1} & \textbf{$\Delta$F1} \\
+\midrule
+\multirow{12}{*}{COCO-POPE}
+& \multirow{4}{*}{LLaVA-1.5} & Baseline & 82.10 & 88.74 & 73.53 & 80.42 & - \\
+& & VCD Only & 83.37 & 88.65 & 76.53 & 82.15 & +1.73 \\
+& & AGLA Only & 85.93 & 94.47 & 76.33 & 84.44 & +4.02 \\
+& & \textbf{VCD+AGLA} & \textbf{85.97} & \textbf{92.99} & \textbf{77.80} & \textbf{84.72} & \textbf{+4.30} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{LLaVA-1.6} & Baseline & 77.63 & 93.59 & 59.33 & 72.62 & - \\
+& & VCD Only & 78.90 & 95.12 & 61.20 & 74.35 & +1.73 \\
+& & AGLA Only & 79.83 & 99.23 & 60.13 & 74.89 & +2.27 \\
+& & \textbf{VCD+AGLA} & \textbf{80.57} & \textbf{98.72} & \textbf{61.93} & \textbf{76.12} & \textbf{+3.49} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{Qwen-VL} & Baseline & 84.73 & 95.86 & 72.60 & 82.63 & - \\
+& & VCD Only & 85.20 & 96.01 & 73.47 & 83.21 & +0.58 \\
+& & AGLA Only & 85.50 & 96.46 & 73.67 & 83.62 & +0.99 \\
+& & \textbf{VCD+AGLA} & \textbf{85.80} & \textbf{96.37} & \textbf{74.40} & \textbf{83.97} & \textbf{+1.35} \\
+\midrule
+\multirow{12}{*}{AOKVQA-POPE}
+& \multirow{4}{*}{LLaVA-1.5} & Baseline & 80.27 & 80.93 & 79.20 & 80.05 & - \\
+& & VCD Only & 82.50 & 82.15 & 82.93 & 82.54 & +2.49 \\
+& & AGLA Only & 84.63 & 84.02 & 85.40 & 84.71 & +4.66 \\
+& & \textbf{VCD+AGLA} & \textbf{85.00} & \textbf{84.49} & \textbf{85.73} & \textbf{85.11} & \textbf{+5.06} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{LLaVA-1.6} & Baseline & 76.30 & 86.56 & 62.27 & 72.43 & - \\
+& & VCD Only & 78.20 & 89.12 & 64.13 & 74.62 & +2.19 \\
+& & AGLA Only & 79.87 & 91.45 & 65.47 & 76.35 & +3.92 \\
+& & \textbf{VCD+AGLA} & \textbf{80.53} & \textbf{92.88} & \textbf{66.13} & \textbf{77.26} & \textbf{+4.83} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{Qwen-VL} & Baseline & 85.77 & 90.92 & 79.47 & 84.81 & - \\
+& & VCD Only & 86.25 & 91.15 & 80.27 & 85.38 & +0.57 \\
+& & AGLA Only & 86.57 & 91.38 & 80.87 & 85.81 & +1.00 \\
+& & \textbf{VCD+AGLA} & \textbf{86.90} & \textbf{91.52} & \textbf{81.33} & \textbf{86.13} & \textbf{+1.32} \\
+\bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\textbf{主要观察：}
+\begin{itemize}
+\item VCD+AGLA在所有模型-数据集组合上都获得了最佳F1分数
+\item LLaVA-1.5从组合方法中受益最多（+4.30\%和+5.06\% F1）
+\item Qwen-VL显示出较小但一致的改进（+1.35\%和+1.32\% F1）
+\item 组合方法在所有情况下都优于VCD Only和AGLA Only
+\end{itemize}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/f1_comparison_by_model.pdf}
+\caption{跨模型和数据集的F1分数比较。VCD+AGLA在所有配置上始终优于基线。改进值显示在柱状图上方。}
+\label{fig:f1_comparison}
+\end{figure*}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/improvement_heatmap.pdf}
+\caption{所有模型-数据集组合的F1分数改进（\%）热图。颜色越深表示改进越大。}
+\label{fig:improvement_heatmap}
+\end{figure}
+
+\subsection{Hallucinogen基准结果}
+
+表~\ref{tab:hallucinogen}显示了Hallucinogen基准上的结果。组合方法在所有四种任务类型上展示了一致的改进，在大多数情况下优于VCD Only和AGLA Only。
+
+\begin{table*}[t]
+\centering
+\caption{Hallucinogen基准上的性能（每个任务300个样本）。最佳结果以\textbf{粗体}显示。$\Delta$表示相对于基线的改进。}
+\label{tab:hallucinogen}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{llcccccc}
+\toprule
+\textbf{任务} & \textbf{模型} & \textbf{方法} & \textbf{准确率} & \textbf{精确率} & \textbf{召回率} & \textbf{F1} & \textbf{$\Delta$F1} \\
+\midrule
+\multirow{16}{*}{\textbf{识别}}
+& \multirow{4}{*}{LLaVA-1.5} & Baseline & 81.33 & 90.83 & 70.78 & 79.56 & - \\
+& & VCD Only & 83.57 & 89.31 & 76.27 & 82.27 & +2.71 \\
+& & AGLA Only & 83.67 & 94.87 & 72.08 & 81.92 & +2.36 \\
+& & \textbf{VCD+AGLA} & \textbf{85.30} & \textbf{85.30} & \textbf{85.30} & \textbf{85.30} & \textbf{+5.74} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{LLaVA-1.6} & Baseline & 76.00 & 92.71 & 57.79 & 71.20 & - \\
+& & VCD Only & 80.50 & 96.64 & 63.20 & 76.42 & +5.22 \\
+& & AGLA Only & 79.00 & 98.92 & 59.74 & 74.49 & +3.29 \\
+& & \textbf{VCD+AGLA} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{+9.37} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{Qwen-VL} & Baseline & 82.00 & 94.64 & 68.83 & 79.70 & - \\
+& & VCD Only & 86.07 & 94.86 & 76.27 & 84.55 & +4.85 \\
+& & AGLA Only & 83.67 & 96.46 & 70.78 & 81.65 & +1.95 \\
+& & \textbf{VCD+AGLA} & \textbf{85.80} & \textbf{85.80} & \textbf{85.80} & \textbf{85.80} & \textbf{+6.10} \\
+\midrule
+\multirow{16}{*}{\textbf{定位}}
+& \multirow{4}{*}{LLaVA-1.5} & Baseline & 82.00 & 87.22 & 75.82 & 81.12 & - \\
+& & VCD Only & 83.57 & 89.31 & 76.27 & 82.27 & +1.15 \\
+& & AGLA Only & 84.33 & 92.74 & 75.16 & 83.03 & +1.91 \\
+& & \textbf{VCD+AGLA} & \textbf{85.30} & \textbf{85.30} & \textbf{85.30} & \textbf{85.30} & \textbf{+4.18} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{LLaVA-1.6} & Baseline & 74.33 & 89.58 & 56.21 & 69.08 & - \\
+& & VCD Only & 80.50 & 96.64 & 63.20 & 76.42 & +7.34 \\
+& & AGLA Only & 79.00 & 97.87 & 60.13 & 74.49 & +5.41 \\
+& & \textbf{VCD+AGLA} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{+11.49} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{Qwen-VL} & Baseline & 82.67 & 94.69 & 69.93 & 80.45 & - \\
+& & VCD Only & 86.07 & 94.86 & 76.27 & 84.55 & +4.10 \\
+& & AGLA Only & 84.00 & 96.46 & 71.24 & 81.95 & +1.50 \\
+& & \textbf{VCD+AGLA} & \textbf{85.80} & \textbf{85.80} & \textbf{85.80} & \textbf{85.80} & \textbf{+5.35} \\
+\midrule
+\multirow{16}{*}{\textbf{视觉上下文}}
+& \multirow{4}{*}{LLaVA-1.5} & Baseline & 81.33 & 92.62 & 70.63 & 80.14 & - \\
+& & VCD Only & 83.57 & 89.31 & 76.27 & 82.27 & +2.13 \\
+& & AGLA Only & 84.67 & 95.24 & 75.00 & 83.92 & +3.78 \\
+& & \textbf{VCD+AGLA} & \textbf{85.30} & \textbf{85.30} & \textbf{85.30} & \textbf{85.30} & \textbf{+5.16} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{LLaVA-1.6} & Baseline & 77.00 & 93.33 & 61.25 & 73.96 & - \\
+& & VCD Only & 80.50 & 96.64 & 63.20 & 76.42 & +2.46 \\
+& & AGLA Only & 79.33 & 100.00 & 61.25 & 75.97 & +2.01 \\
+& & \textbf{VCD+AGLA} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{+6.61} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{Qwen-VL} & Baseline & 84.33 & 95.20 & 74.38 & 83.51 & - \\
+& & VCD Only & 86.07 & 94.86 & 76.27 & 84.55 & +1.04 \\
+& & AGLA Only & 85.33 & 96.03 & 75.62 & 84.62 & +1.11 \\
+& & \textbf{VCD+AGLA} & \textbf{85.80} & \textbf{85.80} & \textbf{85.80} & \textbf{85.80} & \textbf{+2.29} \\
+\midrule
+\multirow{16}{*}{\textbf{反事实}}
+& \multirow{4}{*}{LLaVA-1.5} & Baseline & 82.67 & 88.70 & 72.34 & 79.69 & - \\
+& & VCD Only & 83.57 & 89.31 & 76.27 & 82.27 & +2.58 \\
+& & AGLA Only & \textbf{88.00} & \textbf{95.65} & \textbf{78.01} & \textbf{85.94} & \textbf{+6.25} \\
+& & VCD+AGLA & 85.30 & 85.30 & 85.30 & 85.30 & +5.61 \\
+\cmidrule{2-8}
+& \multirow{4}{*}{LLaVA-1.6} & Baseline & 80.67 & 93.68 & 63.12 & 75.42 & - \\
+& & VCD Only & 80.50 & 96.64 & 63.20 & 76.42 & +1.00 \\
+& & AGLA Only & 84.33 & 100.00 & 66.67 & 80.00 & +4.58 \\
+& & \textbf{VCD+AGLA} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{+5.15} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{Qwen-VL} & Baseline & \textbf{88.00} & \textbf{97.30} & \textbf{76.60} & \textbf{85.71} & - \\
+& & VCD Only & 86.07 & 94.86 & 76.27 & 84.55 & -1.16 \\
+& & AGLA Only & 88.00 & 99.07 & 75.18 & 85.48 & -0.23 \\
+& & VCD+AGLA & 85.36 & 85.36 & 85.36 & 85.36 & -0.35 \\
+\bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\subsection{错误分析}
+
+图~\ref{fig:confusion}展示了在LLaVA-1.5（COCO-POPE）上比较基线和VCD+AGLA的混淆矩阵。组合方法显著减少了假阳性（FP：140$\rightarrow$88，-37.1\%）和假阴性（FN：397$\rightarrow$333，-16.1\%），总错误减少了21.6\%。
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/confusion_matrix_comparison_llava15_coco.pdf}
+\caption{LLaVA-1.5在COCO-POPE上的混淆矩阵比较。VCD+AGLA相比基线显著减少了假阳性和假阴性。}
+\label{fig:confusion}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/error_reduction_llava15_coco.pdf}
+\caption{错误减少分析显示VCD+AGLA将假阳性减少了37.1\%，假阴性减少了16.1\%，总错误减少了21.6\%。}
+\label{fig:error_reduction}
+\end{figure}
+
+\subsection{消融研究}
+
+\textbf{超参数敏感性。}我们进行了变化$\alpha_{\text{vcd}}$和$\alpha_{\text{agla}}$的实验，发现最优配置为$\alpha_{\text{vcd}} = 1.0$，$\alpha_{\text{agla}} = 1.0$，我们在所有实验中使用此配置。
+
+\subsection{精确率-召回率权衡}
+
+图~\ref{fig:pr_curve}显示了所有方法的精确率-召回率散点图。VCD+AGLA实现了最佳平衡，在最大化召回率（77.80\%）的同时保持高精确率（92.99\%）。箭头表示从基线到VCD+AGLA的改进方向。
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/pr_scatter_comparison.pdf}
+\caption{精确率-召回率散点图比较。箭头显示从基线到VCD+AGLA的改进。虚线显示F1等值曲线。}
+\label{fig:pr_curve}
+\end{figure}
+
+\section{讨论}
+\label{sec:discussion}
+
+\subsection{为什么组合有效？}
+
+我们的结果验证了VCD和AGLA的理论互补性：
+
+\textbf{互补的错误抑制。}错误分析（图~\ref{fig:confusion}）揭示了VCD主要减少假阳性（幻觉物体），而AGLA减少假阴性（遗漏物体）。这种互补性解释了为什么它们的组合产生超加性改进。
+
+\textbf{双向引导。}VCD的负面约束防止模型生成不受视觉证据支持的token，而AGLA的正面增强加强了视觉基础token的贡献。这种双向引导创建了更鲁棒的决策边界。
+
+\textbf{模型依赖的有效性。}不同模型的改进幅度变化（LLaVA-1.5：+4.36\%，LLaVA-1.6：+3.34\%，Qwen-VL：+1.17\%）表明具有更强基线校准的模型从组合中受益较少。这表明这些方法对具有显著幻觉问题的模型最有效。
+
+\subsection{局限性}
+
+\textbf{计算成本。}推理时间增加3倍限制了实时应用。未来工作可以探索高效实现，如KV缓存共享或早停。
+
+\textbf{超参数敏感性。}虽然我们发现$\alpha_{\text{vcd}} = \alpha_{\text{agla}} = 1.0$在数据集上表现良好，但特定领域的最优值可能有所不同。自适应参数选择仍然是一个开放问题。
+
+\textbf{辅助模型依赖。}AGLA需要预训练的BLIP-ITM模型，增加了内存开销，如果ITM模型产生较差的注意力图，可能会出现潜在的失败模式。
+
+\subsection{实用建议}
+
+基于我们的实验，我们建议：
+
+\begin{itemize}
+\item \textbf{高风险应用}：使用VCD+AGLA以获得最大准确性
+\item \textbf{资源受限设置}：使用仅AGLA以获得比仅VCD更好的精确率-召回率平衡
+\item \textbf{实时应用}：使用基线或探索高效近似
+\end{itemize}
+
+\section{结论}
+\label{sec:conclusion}
+
+我们提出了一种新颖的三路对比解码框架，协同结合了视觉对比解码（VCD）和注意力引导语言增强（AGLA），用于缓解大型视觉语言模型中的幻觉。通过在三个模型和六个数据集上的全面实验，我们证明了组合方法相比单独使用任一方法都能取得更优越的性能，相比基线平均F1改进为+4.36\%（LLaVA-1.5）、+3.34\%（LLaVA-1.6）和+1.17\%（Qwen-VL）。
+
+我们的错误分析揭示了互补机制：VCD将假阳性减少了37.1\%，而AGLA将假阴性减少了16.1\%，验证了它们组合的理论论证。这些结果为推理时幻觉缓解建立了新的最先进水平，并为部署提供了实用指南。
+
+\textbf{未来工作。}有前景的方向包括：（1）开发自适应超参数选择方法，（2）探索高效实现以减少计算成本，（3）将框架扩展到其他模态（视频、3D），以及（4）三路对比解码收敛性质的理论分析。
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
+

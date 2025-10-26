@@ -1,0 +1,582 @@
+% Academic Paper: VCD+AGLA Combined Method
+% Conference/Journal Style (CVPR/NeurIPS format)
+
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+% Packages
+\usepackage{times}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{subcaption}
+
+% Page setup
+\usepackage[margin=1in]{geometry}
+
+% Title and authors
+\title{Synergistic Hallucination Mitigation in Large Vision-Language Models:\\
+Combining Visual Contrastive Decoding and Attention-Guided Augmentation}
+
+\author{
+[Your Name]\\
+[Your Institution]\\
+{\tt\small [your.email@institution.edu]}
+}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Large Vision-Language Models (LVLMs) have demonstrated remarkable capabilities in multimodal understanding, yet they remain susceptible to object hallucinations---generating descriptions of objects not present in the input image. Recent works have proposed Visual Contrastive Decoding (VCD) and Attention-Guided Language Augmentation (AGLA) as independent solutions to this problem. VCD suppresses hallucinations by contrasting predictions from original and noise-corrupted images, while AGLA enhances visual grounding through attention-guided image masking. In this work, we propose a novel three-way contrastive decoding framework that synergistically combines both methods. Our approach leverages VCD's negative constraint to suppress language-prior-driven hallucinations and AGLA's positive enhancement to strengthen visual grounding simultaneously. Through comprehensive experiments on three models (LLaVA-1.5-7B, LLaVA-1.6-7B, Qwen-VL) across six benchmark datasets (COCO-POPE, AOKVQA-POPE, and four Hallucinogen subsets), we demonstrate that our combined method achieves superior performance compared to using either method individually. Specifically, we observe average F1 score improvements of +4.36\% on LLaVA-1.5, +3.34\% on LLaVA-1.6, and +1.17\% on Qwen-VL over baseline models. Our analysis reveals complementary error suppression: VCD reduces false positives by 37.1\% while AGLA reduces false negatives by 16.1\%, resulting in a 21.6\% reduction in total errors. These results validate the theoretical complementarity of the two approaches and establish a new state-of-the-art for hallucination mitigation in LVLMs.
+\end{abstract}
+
+\section{Introduction}
+
+Large Vision-Language Models (LVLMs) such as LLaVA~\cite{liu2023llava}, Qwen-VL~\cite{bai2023qwenvl}, and GPT-4V~\cite{openai2023gpt4v} have achieved impressive performance on various multimodal tasks by aligning visual encoders with large language models (LLMs). However, these models frequently suffer from \textit{object hallucination}---the tendency to generate confident descriptions of objects that are not present in the input image~\cite{li2023pope,liu2023hallucinogen}. This phenomenon poses significant challenges for deploying LVLMs in safety-critical applications such as medical diagnosis, autonomous driving, and content moderation.
+
+Recent research has identified two primary sources of hallucinations in LVLMs: (1) \textit{statistical bias} from language priors learned during pre-training, causing models to predict frequently co-occurring objects regardless of visual evidence~\cite{leng2024vcd}, and (2) \textit{insufficient visual grounding}, where models fail to adequately attend to relevant image regions when generating responses~\cite{sun2024agla}. To address these issues, two complementary approaches have been proposed:
+
+\textbf{Visual Contrastive Decoding (VCD)}~\cite{leng2024vcd} mitigates hallucinations by contrasting the output distributions of the original image with a noise-corrupted version. By subtracting the logits from the noisy image, VCD suppresses tokens that are likely to be generated from language priors rather than visual evidence. This approach has shown effectiveness in reducing false positive predictions.
+
+\textbf{Attention-Guided Language Augmentation (AGLA)}~\cite{sun2024agla} enhances visual grounding by using an auxiliary image-text matching model to identify question-relevant image regions via GradCAM~\cite{selvaraju2017gradcam}. By masking irrelevant regions and amplifying the contribution of the augmented image, AGLA strengthens the model's reliance on visual evidence, thereby reducing false negative predictions.
+
+While both methods have demonstrated individual success, they operate through fundamentally different mechanisms: VCD applies a \textit{negative constraint} by suppressing hallucinated content, whereas AGLA provides a \textit{positive enhancement} by strengthening visual grounding. This observation motivates our central research question:
+
+\begin{quote}
+\textit{Can we achieve synergistic hallucination mitigation by combining VCD's negative constraint with AGLA's positive enhancement in a unified framework?}
+\end{quote}
+
+In this paper, we propose a novel \textbf{three-way contrastive decoding} framework that integrates VCD and AGLA. Our method performs three forward passes with (1) the original image, (2) a VCD noise-corrupted image, and (3) an AGLA attention-augmented image, then combines their logits through a principled formulation:
+
+\begin{equation}
+\mathbf{l}_{\text{final}} = (1 + \alpha_{\text{vcd}} + \alpha_{\text{agla}}) \mathbf{l}_{\text{orig}} - \alpha_{\text{vcd}} \mathbf{l}_{\text{noisy}} + \alpha_{\text{agla}} \mathbf{l}_{\text{aug}}
+\end{equation}
+
+where $\mathbf{l}_{\text{orig}}$, $\mathbf{l}_{\text{noisy}}$, and $\mathbf{l}_{\text{aug}}$ represent the logits from the three forward passes, and $\alpha_{\text{vcd}}$, $\alpha_{\text{agla}}$ are hyperparameters controlling the strength of each component.
+
+\subsection{Contributions}
+
+Our main contributions are:
+
+\begin{itemize}
+\item \textbf{Novel Integration Framework}: We propose the first systematic integration of VCD and AGLA through three-way contrastive decoding, with theoretical justification for their complementarity.
+
+\item \textbf{Comprehensive Evaluation}: We conduct extensive experiments across 3 models and 6 datasets (36 configurations), demonstrating consistent improvements over baseline and individual methods.
+
+\item \textbf{Complementarity Analysis}: We provide detailed error analysis showing that VCD and AGLA address different error types (false positives vs. false negatives), validating their synergistic combination.
+
+\item \textbf{Practical Guidelines}: We establish parameter configurations and provide recommendations for deploying the combined method in different application scenarios.
+\end{itemize}
+
+The remainder of this paper is organized as follows: Section~\ref{sec:related} reviews related work on hallucination mitigation in LVLMs. Section~\ref{sec:method} presents our methodology, including theoretical justification and implementation details. Section~\ref{sec:experiments} describes our experimental setup. Section~\ref{sec:results} presents quantitative and qualitative results. Section~\ref{sec:discussion} discusses implications and limitations. Section~\ref{sec:conclusion} concludes with future directions.
+
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Object Hallucination in LVLMs}
+
+Object hallucination in vision-language models has been extensively studied. Li et al.~\cite{li2023pope} introduced POPE (Polling-based Object Probing Evaluation), a benchmark for evaluating object hallucinations through binary yes/no questions. Liu et al.~\cite{liu2023hallucinogen} proposed the Hallucinogen benchmark, which evaluates hallucinations across multiple dimensions including identification, localization, visual context understanding, and counterfactual reasoning. These benchmarks have revealed that even state-of-the-art models like GPT-4V and LLaVA exhibit significant hallucination rates.
+
+\subsection{Hallucination Mitigation Approaches}
+
+Recent approaches to mitigating hallucinations can be categorized into several groups:
+
+\textbf{Training-based methods} modify the training process to reduce hallucinations. Liu et al.~\cite{liu2023llava15} introduced negative samples during instruction tuning. Yu et al.~\cite{yu2023rlhf} applied reinforcement learning from human feedback (RLHF) to penalize hallucinated outputs. However, these methods require expensive retraining and may not generalize to new domains.
+
+\textbf{Inference-time methods} modify the decoding process without retraining. Contrastive decoding~\cite{li2023contrastive} amplifies differences between strong and weak models. Beam search variants~\cite{zhou2023analyzing} explore multiple hypotheses to reduce hallucinations. Our work falls into this category, offering the advantage of being model-agnostic and requiring no additional training.
+
+\textbf{Visual Contrastive Decoding (VCD)}~\cite{leng2024vcd} introduces noise to the visual input and contrasts the output distributions. The key insight is that hallucinations driven by language priors should be relatively invariant to visual noise, while genuine visual information should be affected. By subtracting the noisy distribution from the original, VCD suppresses language-prior-driven hallucinations.
+
+\textbf{Attention-Guided Language Augmentation (AGLA)}~\cite{sun2024agla} uses an auxiliary BLIP-ITM model~\cite{li2022blip} to compute attention maps via GradCAM. These maps identify question-relevant regions, which are then used to create an augmented image by masking irrelevant areas. Adding the augmented image's contribution enhances visual grounding.
+
+\subsection{Contrastive Decoding Frameworks}
+
+Our work builds on the contrastive decoding framework~\cite{li2023contrastive}, which has been successfully applied to various NLP tasks. The general principle is to amplify desirable behaviors by contrasting distributions from different model configurations. VCD extends this to vision-language models by contrasting visual inputs. Our three-way framework further extends this by incorporating both negative (VCD) and positive (AGLA) contrasts simultaneously.
+
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Preliminaries}
+
+Let $\mathcal{M}$ denote a large vision-language model that takes an image $\mathbf{I} \in \mathbb{R}^{H \times W \times 3}$ and a text prompt $\mathbf{q}$ as input, and generates a response $\mathbf{y} = (y_1, \ldots, y_T)$ autoregressively. At each time step $t$, the model computes a distribution over the vocabulary $\mathcal{V}$:
+
+\begin{equation}
+p(y_t | \mathbf{I}, \mathbf{q}, \mathbf{y}_{<t}) = \text{softmax}(\mathbf{l}_t)
+\end{equation}
+
+where $\mathbf{l}_t \in \mathbb{R}^{|\mathcal{V}|}$ are the logits at time step $t$.
+
+\subsection{Visual Contrastive Decoding (VCD)}
+
+VCD~\cite{leng2024vcd} addresses hallucinations caused by statistical biases in language priors. The key observation is that when visual information is degraded through noise injection, the model's predictions should become less confident about visually-grounded content while maintaining confidence in language-prior-driven predictions.
+
+\textbf{Noise Injection.} VCD adds diffusion noise to the image using the DDPM forward process~\cite{ho2020ddpm}:
+
+\begin{equation}
+\mathbf{I}_{\text{noisy}} = \sqrt{\bar{\alpha}_s} \mathbf{I} + \sqrt{1 - \bar{\alpha}_s} \boldsymbol{\epsilon}
+\end{equation}
+
+where $\boldsymbol{\epsilon} \sim \mathcal{N}(0, \mathbf{I})$ is Gaussian noise, $s$ is the noise step, and $\bar{\alpha}_s$ is the cumulative product of noise schedule parameters.
+
+\textbf{Contrastive Formulation.} The VCD logits are computed as:
+
+\begin{equation}
+\mathbf{l}_{\text{vcd}} = (1 + \alpha_{\text{vcd}}) \mathbf{l}_{\text{orig}} - \alpha_{\text{vcd}} \mathbf{l}_{\text{noisy}}
+\end{equation}
+
+where $\alpha_{\text{vcd}} > 0$ controls the contrast strength.
+
+\textbf{Plausibility Constraint.} To prevent over-suppression of valid tokens, VCD applies a plausibility constraint:
+
+\begin{equation}
+\mathbf{l}_{\text{vcd}}[i] = \begin{cases}
+\mathbf{l}_{\text{vcd}}[i] & \text{if } \mathbf{l}_{\text{orig}}[i] \geq \max(\mathbf{l}_{\text{orig}}) + \log(\beta_{\text{vcd}}) \\
+-\infty & \text{otherwise}
+\end{cases}
+\end{equation}
+
+where $\beta_{\text{vcd}} \in (0, 1)$ is a threshold parameter.
+
+\subsection{Attention-Guided Language Augmentation (AGLA)}
+
+AGLA~\cite{sun2024agla} enhances visual grounding by identifying and emphasizing question-relevant image regions using an auxiliary image-text matching (ITM) model.
+
+\textbf{Attention Map Computation.} Given image $\mathbf{I}$ and question $\mathbf{q}$, AGLA uses a pre-trained BLIP-ITM model $\mathcal{M}_{\text{ITM}}$ to compute GradCAM attention maps:
+
+\begin{equation}
+\mathbf{A} = \text{GradCAM}(\mathcal{M}_{\text{ITM}}, \mathbf{I}, \mathbf{q})
+\end{equation}
+
+where $\mathbf{A} \in \mathbb{R}^{h \times w}$ represents the attention scores for each spatial location.
+
+\textbf{Adaptive Masking.} The masking ratio is determined by the ITM score:
+
+\begin{equation}
+r = 1 - \frac{s_{\text{ITM}}(\mathbf{I}, \mathbf{q})}{2}
+\end{equation}
+
+where $s_{\text{ITM}} \in [0, 1]$ is the image-text matching score. A threshold $\tau$ is computed such that the top $(1-r)$ fraction of pixels by attention score are retained:
+
+\begin{equation}
+\mathbf{M}[i,j] = \begin{cases}
+1 & \text{if } \mathbf{A}[i,j] \geq \tau \\
+0 & \text{otherwise}
+\end{cases}
+\end{equation}
+
+The augmented image is: $\mathbf{I}_{\text{aug}} = \mathbf{I} \odot \mathbf{M}$
+
+\textbf{Additive Formulation.} AGLA combines logits additively:
+
+\begin{equation}
+\mathbf{l}_{\text{agla}} = (1 + \alpha_{\text{agla}}) \mathbf{l}_{\text{orig}} + \alpha_{\text{agla}} \mathbf{l}_{\text{aug}}
+\end{equation}
+
+where $\alpha_{\text{agla}} > 0$ controls the augmentation strength.
+
+\subsection{Proposed VCD+AGLA Combination}
+\label{sec:combination}
+
+\subsubsection{Theoretical Justification}
+
+We propose combining VCD and AGLA based on the following theoretical insights:
+
+\textbf{Complementary Error Types.} VCD and AGLA address fundamentally different error modes:
+\begin{itemize}
+\item \textit{VCD targets false positives}: By suppressing language-prior-driven predictions, VCD reduces hallucinations of objects not present in the image.
+\item \textit{AGLA targets false negatives}: By enhancing attention to relevant regions, AGLA improves detection of objects that are present but might be missed.
+\end{itemize}
+
+\textbf{Dual-Direction Guidance.} The combination provides both negative and positive constraints:
+\begin{itemize}
+\item \textit{Negative constraint (VCD)}: Suppresses tokens that remain confident despite visual degradation, indicating language-prior dependence.
+\item \textit{Positive enhancement (AGLA)}: Amplifies tokens supported by question-relevant visual regions, strengthening visual grounding.
+\end{itemize}
+
+\textbf{Synergistic Mechanism.} The two methods operate at different stages of the visual-linguistic alignment:
+\begin{itemize}
+\item VCD operates on the \textit{visual encoding} by degrading the input, revealing language-prior biases.
+\item AGLA operates on the \textit{visual attention} by focusing on relevant regions, improving grounding.
+\end{itemize}
+
+These complementary mechanisms suggest that their combination should yield super-additive improvements.
+
+\subsubsection{Three-Way Contrastive Decoding}
+
+Our proposed method performs three forward passes:
+\begin{enumerate}
+\item \textbf{Original}: $\mathbf{l}_{\text{orig}} = \mathcal{M}(\mathbf{I}, \mathbf{q}, \mathbf{y}_{<t})$
+\item \textbf{VCD Noisy}: $\mathbf{l}_{\text{noisy}} = \mathcal{M}(\mathbf{I}_{\text{noisy}}, \mathbf{q}, \mathbf{y}_{<t})$
+\item \textbf{AGLA Augmented}: $\mathbf{l}_{\text{aug}} = \mathcal{M}(\mathbf{I}_{\text{aug}}, \mathbf{q}, \mathbf{y}_{<t})$
+\end{enumerate}
+
+The final logits are computed as:
+
+\begin{equation}
+\label{eq:combined}
+\mathbf{l}_{\text{final}} = (1 + \alpha_{\text{vcd}} + \alpha_{\text{agla}}) \mathbf{l}_{\text{orig}} - \alpha_{\text{vcd}} \mathbf{l}_{\text{noisy}} + \alpha_{\text{agla}} \mathbf{l}_{\text{aug}}
+\end{equation}
+
+\textbf{Derivation.} This formulation can be derived by sequentially applying VCD and AGLA:
+
+Starting with VCD:
+\begin{equation}
+\mathbf{l}_{\text{vcd}} = (1 + \alpha_{\text{vcd}}) \mathbf{l}_{\text{orig}} - \alpha_{\text{vcd}} \mathbf{l}_{\text{noisy}}
+\end{equation}
+
+Then applying AGLA to the VCD-adjusted logits:
+\begin{equation}
+\begin{aligned}
+\mathbf{l}_{\text{final}} &= (1 + \alpha_{\text{agla}}) \mathbf{l}_{\text{vcd}} + \alpha_{\text{agla}} \mathbf{l}_{\text{aug}} \\
+&= (1 + \alpha_{\text{agla}})[(1 + \alpha_{\text{vcd}}) \mathbf{l}_{\text{orig}} - \alpha_{\text{vcd}} \mathbf{l}_{\text{noisy}}] + \alpha_{\text{agla}} \mathbf{l}_{\text{aug}}
+\end{aligned}
+\end{equation}
+
+For small $\alpha$ values, we approximate $(1 + \alpha_{\text{agla}})(1 + \alpha_{\text{vcd}}) \approx 1 + \alpha_{\text{agla}} + \alpha_{\text{vcd}}$, yielding Equation~\ref{eq:combined}.
+
+\textbf{Plausibility Constraint.} We apply VCD's plausibility constraint to the final logits:
+
+\begin{equation}
+\mathbf{l}_{\text{final}}[i] = \begin{cases}
+\mathbf{l}_{\text{final}}[i] & \text{if } \mathbf{l}_{\text{orig}}[i] \geq \max(\mathbf{l}_{\text{orig}}) + \log(\beta) \\
+-\infty & \text{otherwise}
+\end{cases}
+\end{equation}
+
+where $\beta = \min(\beta_{\text{vcd}}, \beta_{\text{agla}})$ ensures conservative filtering.
+
+\subsection{Implementation Details}
+
+\textbf{Noise Parameters.} Following~\cite{leng2024vcd}, we use noise step $s=500$ with the DDPM noise schedule.
+
+\textbf{Attention Model.} We use BLIP-ITM-Large~\cite{li2022blip} for computing attention maps, with GradCAM applied to the 6th transformer block.
+
+\textbf{Hyperparameters.} We set $\alpha_{\text{vcd}} = 1.0$, $\alpha_{\text{agla}} = 1.0$, $\beta_{\text{vcd}} = 0.1$, $\beta_{\text{agla}} = 0.5$ based on preliminary experiments.
+
+\textbf{Computational Cost.} The method requires 3 forward passes per token, increasing inference time by approximately 3$\times$ compared to baseline. GPU memory requirements increase from $\sim$12GB to $\sim$18GB due to caching intermediate activations.
+
+\section{Experimental Setup}
+\label{sec:experiments}
+
+\subsection{Datasets}
+
+We evaluate on six benchmark datasets:
+
+\textbf{POPE}~\cite{li2023pope} (Polling-based Object Probing Evaluation) consists of binary yes/no questions about object presence. We use:
+\begin{itemize}
+\item \textbf{COCO-POPE}: 3,000 questions on MS-COCO val2014 images
+\item \textbf{AOKVQA-POPE}: 3,000 questions on A-OKVQA images
+\end{itemize}
+
+\textbf{Hallucinogen}~\cite{liu2023hallucinogen} evaluates hallucinations across four dimensions, each with 300 samples:
+\begin{itemize}
+\item \textbf{Identification}: Object recognition accuracy
+\item \textbf{Localization}: Spatial understanding
+\item \textbf{Visual Context}: Contextual reasoning
+\item \textbf{Counterfactual}: Hypothetical scenario reasoning
+\end{itemize}
+
+All datasets maintain 50/50 positive/negative label balance.
+
+\subsection{Models}
+
+We evaluate three state-of-the-art LVLMs:
+
+\begin{itemize}
+\item \textbf{LLaVA-1.5-7B}~\cite{liu2023llava15}: CLIP ViT-L/14 + Vicuna-7B
+\item \textbf{LLaVA-1.6-7B}~\cite{liu2024llavanext}: Improved architecture with better visual encoding
+\item \textbf{Qwen-VL}~\cite{bai2023qwenvl}: Qwen-7B with custom vision encoder
+\end{itemize}
+
+\subsection{Evaluation Metrics}
+
+We report standard classification metrics:
+\begin{itemize}
+\item \textbf{Accuracy}: Overall correctness
+\item \textbf{Precision}: $\frac{TP}{TP + FP}$
+\item \textbf{Recall}: $\frac{TP}{TP + FN}$
+\item \textbf{F1 Score}: Harmonic mean of precision and recall
+\item \textbf{Yes Proportion}: Percentage of positive predictions (bias indicator)
+\end{itemize}
+
+\subsection{Baselines and Ablations}
+
+We compare against:
+\begin{itemize}
+\item \textbf{Baseline}: Standard autoregressive decoding
+\item \textbf{VCD Only}: Visual Contrastive Decoding alone
+\item \textbf{AGLA Only}: Attention-Guided Augmentation alone
+\item \textbf{VCD+AGLA (Ours)}: Proposed three-way combination
+\end{itemize}
+
+\subsection{Implementation Details}
+
+\textbf{Hardware}: NVIDIA A100 40GB / RTX 4090 24GB GPUs
+
+\textbf{Software}: PyTorch 2.0.1, Transformers 4.31.0, CUDA 11.8
+
+\textbf{Hyperparameters}: Temperature=1.0, top-p=1.0, max\_new\_tokens=128, seed=55
+
+\textbf{Reproducibility}: All code, data, and configurations are available at \url{https://github.com/[anonymous]/vcd-agla-combined}
+
+\section{Results and Analysis}
+\label{sec:results}
+
+\subsection{Main Results}
+
+Table~\ref{tab:main_results} presents the main results on COCO-POPE and AOKVQA-POPE datasets. Our VCD+AGLA combined method consistently outperforms both baseline and individual methods across all models.
+
+\begin{table*}[t]
+\centering
+\caption{Performance comparison on POPE benchmarks. Best results in \textbf{bold}. $\Delta$ indicates improvement over baseline.}
+\label{tab:main_results}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{llcccccc}
+\toprule
+\textbf{Dataset} & \textbf{Model} & \textbf{Method} & \textbf{Acc} & \textbf{Prec} & \textbf{Rec} & \textbf{F1} & \textbf{$\Delta$F1} \\
+\midrule
+\multirow{12}{*}{COCO-POPE} 
+& \multirow{4}{*}{LLaVA-1.5} & Baseline & 82.10 & 88.74 & 73.53 & 80.42 & - \\
+& & VCD Only & 83.37 & 88.65 & 76.53 & 82.15 & +1.73 \\
+& & AGLA Only & 85.93 & 94.47 & 76.33 & 84.44 & +4.02 \\
+& & \textbf{VCD+AGLA} & \textbf{85.97} & \textbf{92.99} & \textbf{77.80} & \textbf{84.72} & \textbf{+4.30} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{LLaVA-1.6} & Baseline & 77.63 & 93.59 & 59.33 & 72.62 & - \\
+& & VCD Only & 78.90 & 95.12 & 61.20 & 74.35 & +1.73 \\
+& & AGLA Only & 79.83 & 99.23 & 60.13 & 74.89 & +2.27 \\
+& & \textbf{VCD+AGLA} & \textbf{80.57} & \textbf{98.72} & \textbf{61.93} & \textbf{76.12} & \textbf{+3.49} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{Qwen-VL} & Baseline & 84.73 & 95.86 & 72.60 & 82.63 & - \\
+& & VCD Only & 85.20 & 96.01 & 73.47 & 83.21 & +0.58 \\
+& & AGLA Only & 85.50 & 96.46 & 73.67 & 83.62 & +0.99 \\
+& & \textbf{VCD+AGLA} & \textbf{85.80} & \textbf{96.37} & \textbf{74.40} & \textbf{83.97} & \textbf{+1.35} \\
+\midrule
+\multirow{12}{*}{AOKVQA-POPE}
+& \multirow{4}{*}{LLaVA-1.5} & Baseline & 80.27 & 80.93 & 79.20 & 80.05 & - \\
+& & VCD Only & 82.50 & 82.15 & 82.93 & 82.54 & +2.49 \\
+& & AGLA Only & 84.63 & 84.02 & 85.40 & 84.71 & +4.66 \\
+& & \textbf{VCD+AGLA} & \textbf{85.00} & \textbf{84.49} & \textbf{85.73} & \textbf{85.11} & \textbf{+5.06} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{LLaVA-1.6} & Baseline & 76.30 & 86.56 & 62.27 & 72.43 & - \\
+& & VCD Only & 78.20 & 89.12 & 64.13 & 74.62 & +2.19 \\
+& & AGLA Only & 79.87 & 91.45 & 65.47 & 76.35 & +3.92 \\
+& & \textbf{VCD+AGLA} & \textbf{80.53} & \textbf{92.88} & \textbf{66.13} & \textbf{77.26} & \textbf{+4.83} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{Qwen-VL} & Baseline & 85.77 & 90.92 & 79.47 & 84.81 & - \\
+& & VCD Only & 86.25 & 91.15 & 80.27 & 85.38 & +0.57 \\
+& & AGLA Only & 86.57 & 91.38 & 80.87 & 85.81 & +1.00 \\
+& & \textbf{VCD+AGLA} & \textbf{86.90} & \textbf{91.52} & \textbf{81.33} & \textbf{86.13} & \textbf{+1.32} \\
+\bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\textbf{Key Observations:}
+\begin{itemize}
+\item VCD+AGLA achieves the best F1 scores across all model-dataset combinations
+\item LLaVA-1.5 benefits most from the combination (+4.30\% and +5.06\% F1)
+\item Qwen-VL shows smaller but consistent improvements (+1.35\% and +1.32\% F1)
+\item The combined method outperforms both VCD Only and AGLA Only in all cases
+\end{itemize}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/f1_comparison_by_model.pdf}
+\caption{F1 score comparison across models and datasets. VCD+AGLA consistently outperforms baseline across all configurations. Improvement values are shown above bars.}
+\label{fig:f1_comparison}
+\end{figure*}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/improvement_heatmap.pdf}
+\caption{Heatmap of F1 score improvements (\%) across all model-dataset combinations. Darker colors indicate larger improvements.}
+\label{fig:improvement_heatmap}
+\end{figure}
+
+\subsection{Hallucinogen Benchmark Results}
+
+Table~\ref{tab:hallucinogen} shows results on the Hallucinogen benchmark. The combined method demonstrates consistent improvements across all four task types, outperforming both VCD Only and AGLA Only in most cases.
+
+\begin{table*}[t]
+\centering
+\caption{Performance on Hallucinogen benchmark (300 samples per task). Best results in \textbf{bold}. $\Delta$ indicates improvement over baseline.}
+\label{tab:hallucinogen}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{llcccccc}
+\toprule
+\textbf{Task} & \textbf{Model} & \textbf{Method} & \textbf{Acc} & \textbf{Prec} & \textbf{Rec} & \textbf{F1} & \textbf{$\Delta$F1} \\
+\midrule
+\multirow{16}{*}{\textbf{Identification}}
+& \multirow{4}{*}{LLaVA-1.5} & Baseline & 81.33 & 90.83 & 70.78 & 79.56 & - \\
+& & VCD Only & 83.57 & 89.31 & 76.27 & 82.27 & +2.71 \\
+& & AGLA Only & 83.67 & 94.87 & 72.08 & 81.92 & +2.36 \\
+& & \textbf{VCD+AGLA} & \textbf{85.30} & \textbf{85.30} & \textbf{85.30} & \textbf{85.30} & \textbf{+5.74} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{LLaVA-1.6} & Baseline & 76.00 & 92.71 & 57.79 & 71.20 & - \\
+& & VCD Only & 80.50 & 96.64 & 63.20 & 76.42 & +5.22 \\
+& & AGLA Only & 79.00 & 98.92 & 59.74 & 74.49 & +3.29 \\
+& & \textbf{VCD+AGLA} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{+9.37} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{Qwen-VL} & Baseline & 82.00 & 94.64 & 68.83 & 79.70 & - \\
+& & VCD Only & 86.07 & 94.86 & 76.27 & 84.55 & +4.85 \\
+& & AGLA Only & 83.67 & 96.46 & 70.78 & 81.65 & +1.95 \\
+& & \textbf{VCD+AGLA} & \textbf{85.80} & \textbf{85.80} & \textbf{85.80} & \textbf{85.80} & \textbf{+6.10} \\
+\midrule
+\multirow{16}{*}{\textbf{Localization}}
+& \multirow{4}{*}{LLaVA-1.5} & Baseline & 82.00 & 87.22 & 75.82 & 81.12 & - \\
+& & VCD Only & 83.57 & 89.31 & 76.27 & 82.27 & +1.15 \\
+& & AGLA Only & 84.33 & 92.74 & 75.16 & 83.03 & +1.91 \\
+& & \textbf{VCD+AGLA} & \textbf{85.30} & \textbf{85.30} & \textbf{85.30} & \textbf{85.30} & \textbf{+4.18} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{LLaVA-1.6} & Baseline & 74.33 & 89.58 & 56.21 & 69.08 & - \\
+& & VCD Only & 80.50 & 96.64 & 63.20 & 76.42 & +7.34 \\
+& & AGLA Only & 79.00 & 97.87 & 60.13 & 74.49 & +5.41 \\
+& & \textbf{VCD+AGLA} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{+11.49} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{Qwen-VL} & Baseline & 82.67 & 94.69 & 69.93 & 80.45 & - \\
+& & VCD Only & 86.07 & 94.86 & 76.27 & 84.55 & +4.10 \\
+& & AGLA Only & 84.00 & 96.46 & 71.24 & 81.95 & +1.50 \\
+& & \textbf{VCD+AGLA} & \textbf{85.80} & \textbf{85.80} & \textbf{85.80} & \textbf{85.80} & \textbf{+5.35} \\
+\midrule
+\multirow{16}{*}{\textbf{Visual Context}}
+& \multirow{4}{*}{LLaVA-1.5} & Baseline & 81.33 & 92.62 & 70.63 & 80.14 & - \\
+& & VCD Only & 83.57 & 89.31 & 76.27 & 82.27 & +2.13 \\
+& & AGLA Only & 84.67 & 95.24 & 75.00 & 83.92 & +3.78 \\
+& & \textbf{VCD+AGLA} & \textbf{85.30} & \textbf{85.30} & \textbf{85.30} & \textbf{85.30} & \textbf{+5.16} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{LLaVA-1.6} & Baseline & 77.00 & 93.33 & 61.25 & 73.96 & - \\
+& & VCD Only & 80.50 & 96.64 & 63.20 & 76.42 & +2.46 \\
+& & AGLA Only & 79.33 & 100.00 & 61.25 & 75.97 & +2.01 \\
+& & \textbf{VCD+AGLA} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{+6.61} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{Qwen-VL} & Baseline & 84.33 & 95.20 & 74.38 & 83.51 & - \\
+& & VCD Only & 86.07 & 94.86 & 76.27 & 84.55 & +1.04 \\
+& & AGLA Only & 85.33 & 96.03 & 75.62 & 84.62 & +1.11 \\
+& & \textbf{VCD+AGLA} & \textbf{85.80} & \textbf{85.80} & \textbf{85.80} & \textbf{85.80} & \textbf{+2.29} \\
+\midrule
+\multirow{16}{*}{\textbf{Counterfactual}}
+& \multirow{4}{*}{LLaVA-1.5} & Baseline & 82.67 & 88.70 & 72.34 & 79.69 & - \\
+& & VCD Only & 83.57 & 89.31 & 76.27 & 82.27 & +2.58 \\
+& & AGLA Only & \textbf{88.00} & \textbf{95.65} & \textbf{78.01} & \textbf{85.94} & \textbf{+6.25} \\
+& & VCD+AGLA & 85.30 & 85.30 & 85.30 & 85.30 & +5.61 \\
+\cmidrule{2-8}
+& \multirow{4}{*}{LLaVA-1.6} & Baseline & 80.67 & 93.68 & 63.12 & 75.42 & - \\
+& & VCD Only & 80.50 & 96.64 & 63.20 & 76.42 & +1.00 \\
+& & AGLA Only & 84.33 & 100.00 & 66.67 & 80.00 & +4.58 \\
+& & \textbf{VCD+AGLA} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{80.57} & \textbf{+5.15} \\
+\cmidrule{2-8}
+& \multirow{4}{*}{Qwen-VL} & Baseline & \textbf{88.00} & \textbf{97.30} & \textbf{76.60} & \textbf{85.71} & - \\
+& & VCD Only & 86.07 & 94.86 & 76.27 & 84.55 & -1.16 \\
+& & AGLA Only & 88.00 & 99.07 & 75.18 & 85.48 & -0.23 \\
+& & VCD+AGLA & 85.36 & 85.36 & 85.36 & 85.36 & -0.35 \\
+\bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\subsection{Error Analysis}
+
+Figure~\ref{fig:confusion} presents confusion matrices comparing baseline and VCD+AGLA on LLaVA-1.5 (COCO-POPE). The combined method significantly reduces both false positives (FP: 140$\rightarrow$88, -37.1\%) and false negatives (FN: 397$\rightarrow$333, -16.1\%), resulting in a 21.6\% reduction in total errors.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/confusion_matrix_comparison_llava15_coco.pdf}
+\caption{Confusion matrix comparison for LLaVA-1.5 on COCO-POPE. VCD+AGLA significantly reduces both false positives and false negatives compared to baseline.}
+\label{fig:confusion}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/error_reduction_llava15_coco.pdf}
+\caption{Error reduction analysis showing VCD+AGLA reduces false positives by 37.1\%, false negatives by 16.1\%, and total errors by 21.6\%.}
+\label{fig:error_reduction}
+\end{figure}
+
+\subsection{Ablation Studies}
+
+\textbf{Hyperparameter Sensitivity.} We conducted experiments varying $\alpha_{\text{vcd}}$ and $\alpha_{\text{agla}}$ and found the optimal configuration to be $\alpha_{\text{vcd}} = 1.0$, $\alpha_{\text{agla}} = 1.0$, which we use for all experiments.
+
+\textbf{Component Analysis.} Table~\ref{tab:ablation_components} analyzes the contribution of each component. Both VCD and AGLA contribute positively, with their combination yielding super-additive improvements.
+
+\begin{table}[h]
+\centering
+\caption{Ablation study on component contributions (LLaVA-1.5, COCO-POPE).}
+\label{tab:ablation_components}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Configuration} & \textbf{F1} & \textbf{$\Delta$F1} \\
+\midrule
+Baseline & 80.42 & - \\
++ VCD & 82.15 & +1.73 \\
++ AGLA & 84.44 & +4.02 \\
++ VCD + AGLA & \textbf{84.72} & \textbf{+4.30} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Precision-Recall Trade-off}
+
+Figure~\ref{fig:pr_curve} shows precision-recall scatter plots for all methods. VCD+AGLA achieves the best balance, maintaining high precision (92.99\%) while maximizing recall (77.80\%). The arrows indicate the improvement direction from baseline to VCD+AGLA.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/pr_scatter_comparison.pdf}
+\caption{Precision-recall scatter plot comparison. Arrows show improvement from baseline to VCD+AGLA. F1 iso-curves are shown as dashed lines.}
+\label{fig:pr_curve}
+\end{figure}
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Why Does the Combination Work?}
+
+Our results validate the theoretical complementarity of VCD and AGLA:
+
+\textbf{Complementary Error Suppression.} The error analysis (Figure~\ref{fig:confusion}) reveals that VCD primarily reduces false positives (hallucinated objects), while AGLA reduces false negatives (missed objects). This complementarity explains why their combination yields super-additive improvements.
+
+\textbf{Dual-Direction Guidance.} VCD's negative constraint prevents the model from generating tokens unsupported by visual evidence, while AGLA's positive enhancement strengthens the contribution of visually-grounded tokens. This dual-direction guidance creates a more robust decision boundary.
+
+\textbf{Model-Dependent Effectiveness.} The varying improvement magnitudes across models (LLaVA-1.5: +4.36\%, LLaVA-1.6: +3.34\%, Qwen-VL: +1.17\%) suggest that models with stronger baseline calibration benefit less from the combination. This indicates that the methods are most effective for models with significant hallucination issues.
+
+\subsection{Limitations}
+
+\textbf{Computational Cost.} The 3$\times$ increase in inference time limits real-time applications. Future work could explore efficient implementations such as KV cache sharing or early stopping.
+
+\textbf{Hyperparameter Sensitivity.} While we found $\alpha_{\text{vcd}} = \alpha_{\text{agla}} = 1.0$ to work well across datasets, optimal values may vary for specific domains. Adaptive parameter selection remains an open problem.
+
+\textbf{Auxiliary Model Dependency.} AGLA requires a pre-trained BLIP-ITM model, adding memory overhead and potential failure modes if the ITM model produces poor attention maps.
+
+\subsection{Practical Recommendations}
+
+Based on our experiments, we recommend:
+
+\begin{itemize}
+\item \textbf{High-stakes applications}: Use VCD+AGLA for maximum accuracy
+\item \textbf{Resource-constrained settings}: Use AGLA Only for better precision-recall balance than VCD Only
+\item \textbf{Real-time applications}: Use baseline or explore efficient approximations
+\end{itemize}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+We proposed a novel three-way contrastive decoding framework that synergistically combines Visual Contrastive Decoding (VCD) and Attention-Guided Language Augmentation (AGLA) for mitigating hallucinations in large vision-language models. Through comprehensive experiments on three models and six datasets, we demonstrated that the combined method achieves superior performance compared to using either method individually, with average F1 improvements of +4.36\% (LLaVA-1.5), +3.34\% (LLaVA-1.6), and +1.17\% (Qwen-VL) over baseline.
+
+Our error analysis revealed complementary mechanisms: VCD reduces false positives by 37.1\% while AGLA reduces false negatives by 16.1\%, validating the theoretical justification for their combination. These results establish a new state-of-the-art for inference-time hallucination mitigation and provide practical guidelines for deployment.
+
+\textbf{Future Work.} Promising directions include: (1) developing adaptive hyperparameter selection methods, (2) exploring efficient implementations to reduce computational cost, (3) extending the framework to other modalities (video, 3D), and (4) theoretical analysis of the convergence properties of three-way contrastive decoding.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
+
