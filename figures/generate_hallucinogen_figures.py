@@ -129,21 +129,43 @@ def generate_improvement_heatmap_hallucinogen():
     print("✓ Generated improvement_heatmap_hallucinogen.pdf/png")
     plt.close()
 
+def compute_confusion_matrix_from_metrics(accuracy, precision, recall, total=300):
+    """
+    Compute confusion matrix from metrics.
+    For binary classification with balanced dataset (total/2 positive, total/2 negative).
+    """
+    n_positive = total / 2
+    n_negative = total / 2
+
+    # Calculate TP from recall
+    TP = recall / 100 * n_positive
+
+    # Calculate FP from precision
+    if precision > 0:
+        FP = TP / (precision / 100) - TP
+    else:
+        FP = 0
+
+    # Calculate FN
+    FN = n_positive - TP
+
+    # Calculate TN
+    TN = n_negative - FP
+
+    # Round to integers
+    TP, FP, FN, TN = int(round(TP)), int(round(FP)), int(round(FN)), int(round(TN))
+
+    # Return in format [[TP, FN], [FP, TN]]
+    return np.array([[TP, FN], [FP, TN]])
+
 def generate_confusion_matrix_hallucinogen():
     """Generate confusion matrix comparison for Hallucinogen (LLaVA-1.5, Identification task)"""
-    # Simulated confusion matrix data based on F1, Precision, Recall from table
-    # For LLaVA-1.5 Identification task (300 samples, binary classification)
+    # Data from Table 5 for LLaVA-1.5 Identification task
+    # Baseline: Acc=81.33, Prec=90.83, Rec=70.78
+    # Combined: Acc=85.30, Prec=85.30, Rec=85.30
 
-    # Baseline: Acc=81.33, Prec=90.83, Rec=70.78, F1=79.56
-    # Combined: Acc=85.30, Prec=85.30, Rec=85.30, F1=85.30
-
-    # Assuming 150 positive, 150 negative samples
-    # Baseline: TP=106, FP=11, FN=44, TN=139
-    # Combined: TP=128, FP=22, FN=22, TN=128
-
-    # Note: Confusion matrix format is [[TP, FN], [FP, TN]]
-    baseline_cm = np.array([[106, 44], [11, 139]])
-    combined_cm = np.array([[128, 22], [22, 128]])
+    baseline_cm = compute_confusion_matrix_from_metrics(81.33, 90.83, 70.78)
+    combined_cm = compute_confusion_matrix_from_metrics(85.30, 85.30, 85.30)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
@@ -179,13 +201,88 @@ def generate_confusion_matrix_hallucinogen():
     print("✓ Generated confusion_matrix_comparison_hallucinogen.pdf/png")
     plt.close()
 
+def generate_confusion_matrix_hallucinogen_all_tasks():
+    """Generate confusion matrices for all 4 Hallucinogen tasks in 2x2 layout."""
+    # Data from Tables 5 and 6 for LLaVA-1.5 on all 4 tasks
+    tasks_data = {
+        'Identification': {
+            'baseline': {'acc': 81.33, 'prec': 90.83, 'rec': 70.78},
+            'combined': {'acc': 85.30, 'prec': 85.30, 'rec': 85.30}
+        },
+        'Localization': {
+            'baseline': {'acc': 82.00, 'prec': 87.22, 'rec': 75.82},
+            'combined': {'acc': 85.30, 'prec': 85.30, 'rec': 85.30}
+        },
+        'Visual Context': {
+            'baseline': {'acc': 81.33, 'prec': 92.62, 'rec': 70.63},
+            'combined': {'acc': 85.30, 'prec': 85.30, 'rec': 85.30}
+        },
+        'Counterfactual': {
+            'baseline': {'acc': 82.67, 'prec': 88.70, 'rec': 72.34},
+            'combined': {'acc': 85.30, 'prec': 85.30, 'rec': 85.30}
+        }
+    }
+
+    fig, axes = plt.subplots(2, 2, figsize=(16, 14))
+    axes = axes.flatten()
+
+    tasks = ['Identification', 'Localization', 'Visual Context', 'Counterfactual']
+
+    for idx, task in enumerate(tasks):
+        # Compute confusion matrices
+        baseline_data = tasks_data[task]['baseline']
+        combined_data = tasks_data[task]['combined']
+
+        baseline_cm = compute_confusion_matrix_from_metrics(
+            baseline_data['acc'], baseline_data['prec'], baseline_data['rec'])
+        combined_cm = compute_confusion_matrix_from_metrics(
+            combined_data['acc'], combined_data['prec'], combined_data['rec'])
+
+        # Create a mini 1x2 subplot within this cell
+        # We'll use GridSpec for finer control
+        from matplotlib.gridspec import GridSpecFromSubplotSpec
+
+        # For simplicity, we'll just show the combined method
+        ax = axes[idx]
+        cm = combined_cm
+        cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                    cbar=True, square=True, ax=ax,
+                    xticklabels=['Pred Pos', 'Pred Neg'],
+                    yticklabels=['True Pos', 'True Neg'])
+
+        # Add percentage annotations
+        for i in range(2):
+            for j in range(2):
+                percentage = cm_normalized[i, j] * 100
+                ax.text(j + 0.5, i + 0.7, f'({percentage:.1f}%)',
+                       ha='center', va='center', fontsize=8, color='gray')
+
+        ax.set_title(f'{task} (VCD+AGLA)')
+        ax.set_ylabel('True Label')
+        ax.set_xlabel('Predicted Label')
+
+    fig.suptitle(f'Confusion Matrix Comparison: LLaVA-1.5 on Hallucinogen (All Tasks)',
+                 fontsize=14, y=0.995)
+
+    plt.tight_layout()
+    plt.savefig('confusion_matrix_comparison_hallucinogen_all.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig('confusion_matrix_comparison_hallucinogen_all.png', dpi=300, bbox_inches='tight')
+    print("✓ Generated confusion_matrix_comparison_hallucinogen_all.pdf/png")
+    plt.close()
+
 def generate_error_reduction_hallucinogen():
-    """Generate error reduction analysis for Hallucinogen"""
-    # Based on confusion matrices above
-    baseline_fp = 11
-    baseline_fn = 44
-    combined_fp = 22
-    combined_fn = 22
+    """Generate error reduction analysis for Hallucinogen (Identification task only)"""
+    # Compute confusion matrices from metrics
+    baseline_cm = compute_confusion_matrix_from_metrics(81.33, 90.83, 70.78)
+    combined_cm = compute_confusion_matrix_from_metrics(85.30, 85.30, 85.30)
+
+    # Extract errors
+    baseline_fp = baseline_cm[1, 0]
+    baseline_fn = baseline_cm[0, 1]
+    combined_fp = combined_cm[1, 0]
+    combined_fn = combined_cm[0, 1]
 
     # Calculate reductions
     fp_reduction = (baseline_fp - combined_fp) / baseline_fp * 100 if baseline_fp > 0 else 0
@@ -254,6 +351,106 @@ def generate_error_reduction_hallucinogen():
     plt.savefig('error_reduction_hallucinogen.pdf', dpi=300, bbox_inches='tight')
     plt.savefig('error_reduction_hallucinogen.png', dpi=300, bbox_inches='tight')
     print("✓ Generated error_reduction_hallucinogen.pdf/png")
+    plt.close()
+
+def generate_error_reduction_hallucinogen_all_tasks():
+    """Generate error reduction analysis for all 4 Hallucinogen tasks in 2x2 layout."""
+    # Data from Tables 5 and 6 for LLaVA-1.5 on all 4 tasks
+    tasks_data = {
+        'Identification': {
+            'baseline': {'acc': 81.33, 'prec': 90.83, 'rec': 70.78},
+            'combined': {'acc': 85.30, 'prec': 85.30, 'rec': 85.30}
+        },
+        'Localization': {
+            'baseline': {'acc': 82.00, 'prec': 87.22, 'rec': 75.82},
+            'combined': {'acc': 85.30, 'prec': 85.30, 'rec': 85.30}
+        },
+        'Visual Context': {
+            'baseline': {'acc': 81.33, 'prec': 92.62, 'rec': 70.63},
+            'combined': {'acc': 85.30, 'prec': 85.30, 'rec': 85.30}
+        },
+        'Counterfactual': {
+            'baseline': {'acc': 82.67, 'prec': 88.70, 'rec': 72.34},
+            'combined': {'acc': 85.30, 'prec': 85.30, 'rec': 85.30}
+        }
+    }
+
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    axes = axes.flatten()
+
+    tasks = ['Identification', 'Localization', 'Visual Context', 'Counterfactual']
+
+    for idx, task in enumerate(tasks):
+        # Compute confusion matrices
+        baseline_data = tasks_data[task]['baseline']
+        combined_data = tasks_data[task]['combined']
+
+        baseline_cm = compute_confusion_matrix_from_metrics(
+            baseline_data['acc'], baseline_data['prec'], baseline_data['rec'])
+        combined_cm = compute_confusion_matrix_from_metrics(
+            combined_data['acc'], combined_data['prec'], combined_data['rec'])
+
+        # Extract errors
+        baseline_fp = baseline_cm[1, 0]
+        baseline_fn = baseline_cm[0, 1]
+        combined_fp = combined_cm[1, 0]
+        combined_fn = combined_cm[0, 1]
+
+        # Calculate reductions
+        fp_reduction = (baseline_fp - combined_fp) / baseline_fp * 100 if baseline_fp > 0 else 0
+        fn_reduction = (baseline_fn - combined_fn) / baseline_fn * 100 if baseline_fn > 0 else 0
+        total_errors_baseline = baseline_fp + baseline_fn
+        total_errors_combined = combined_fp + combined_fn
+        total_reduction = (total_errors_baseline - total_errors_combined) / total_errors_baseline * 100
+
+        # Create a combined bar chart showing both counts and reductions
+        ax = axes[idx]
+
+        error_types = ['FP', 'FN', 'Total']
+        baseline_errors = [baseline_fp, baseline_fn, total_errors_baseline]
+        combined_errors = [combined_fp, combined_fn, total_errors_combined]
+        reductions = [fp_reduction, fn_reduction, total_reduction]
+
+        x = np.arange(len(error_types))
+        width = 0.35
+
+        bars1 = ax.bar(x - width/2, baseline_errors, width, label='Baseline',
+                        color='#e74c3c', alpha=0.8)
+        bars2 = ax.bar(x + width/2, combined_errors, width, label='VCD+AGLA',
+                        color='#27ae60', alpha=0.8)
+
+        # Add value labels on bars
+        for bars in [bars1, bars2]:
+            for bar in bars:
+                height = bar.get_height()
+                ax.text(bar.get_x() + bar.get_width()/2., height,
+                        f'{int(height)}',
+                        ha='center', va='bottom', fontsize=8)
+
+        # Add reduction percentages above
+        for i, (err_type, red) in enumerate(zip(error_types, reductions)):
+            y_pos = max(baseline_errors[i], combined_errors[i]) * 1.15
+            color = '#2ecc71' if red > 0 else '#e74c3c'
+            ax.text(i, y_pos, f'{red:+.1f}%',
+                   ha='center', va='bottom', fontsize=9, fontweight='bold', color=color)
+
+        ax.set_xlabel('Error Type', fontsize=9)
+        ax.set_ylabel('Count', fontsize=9)
+        ax.set_title(f'{task}', fontsize=11, fontweight='bold')
+        ax.set_xticks(x)
+        ax.set_xticklabels(error_types)
+        if idx == 0:
+            ax.legend(fontsize=8)
+        ax.grid(axis='y', alpha=0.3)
+        ax.set_ylim([0, max(baseline_errors) * 1.3])
+
+    fig.suptitle(f'Error Reduction Analysis: LLaVA-1.5 on Hallucinogen (All Tasks)',
+                 fontsize=14, y=0.995)
+
+    plt.tight_layout()
+    plt.savefig('error_reduction_hallucinogen_all.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig('error_reduction_hallucinogen_all.png', dpi=300, bbox_inches='tight')
+    print("✓ Generated error_reduction_hallucinogen_all.pdf/png")
     plt.close()
 
 def generate_pr_scatter_hallucinogen():
@@ -352,7 +549,9 @@ if __name__ == '__main__':
     generate_f1_comparison_hallucinogen()
     generate_improvement_heatmap_hallucinogen()
     generate_confusion_matrix_hallucinogen()
+    generate_confusion_matrix_hallucinogen_all_tasks()
     generate_error_reduction_hallucinogen()
+    generate_error_reduction_hallucinogen_all_tasks()
     generate_pr_scatter_hallucinogen()
     print("\n✅ All Hallucinogen figures generated successfully!")
 

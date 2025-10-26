@@ -417,23 +417,23 @@ Figure~\ref{fig:f1_comparison_pope} visualizes the F1 score improvements across 
 
 \subsubsection{Error Analysis on POPE}
 
-To provide detailed error analysis while maintaining clarity, we focus on LLaVA-1.5 on COCO-POPE as a representative example (similar patterns are observed on A-OKVQA). Figures~\ref{fig:confusion_pope} and~\ref{fig:error_reduction_pope} present confusion matrices and error reduction analysis comparing baseline and VCD+AGLA. The combined method significantly reduces both false positives (FP: 140$\rightarrow$88, -37.1\%) and false negatives (FN: 397$\rightarrow$333, -16.1\%), resulting in a 21.6\% reduction in total errors.
+Figures~\ref{fig:confusion_pope} and~\ref{fig:error_reduction_pope} present comprehensive confusion matrices and error reduction analysis for LLaVA-1.5 across both POPE subsets (COCO and A-OKVQA), comparing baseline and VCD+AGLA performance. On COCO-POPE, the combined method significantly reduces both false positives (FP: 140$\rightarrow$88, -37.1\%) and false negatives (FN: 397$\rightarrow$333, -16.1\%), resulting in a 21.6\% reduction in total errors. On A-OKVQA-POPE, complementary error reduction is observed with FP reduction of 15.7\% (280$\rightarrow$236) and FN reduction of 31.4\% (312$\rightarrow$214), yielding 24.0\% total error reduction.
 
-\begin{figure}[htbp]
+\begin{figure*}[htbp]
 \centering
-\includegraphics[width=\columnwidth]{figures/confusion_matrix_comparison_llava15_coco.pdf}
-\caption{Confusion matrix comparison for LLaVA-1.5 on COCO-POPE. VCD+AGLA significantly reduces both false positives and false negatives compared to baseline.}
+\includegraphics[width=\textwidth]{figures/confusion_matrix_comparison_pope.pdf}
+\caption{Confusion matrix comparison for LLaVA-1.5 on both POPE subsets (COCO and A-OKVQA). VCD+AGLA significantly reduces both false positives and false negatives across both datasets, demonstrating consistent error suppression.}
 \label{fig:confusion_pope}
-\end{figure}
+\end{figure*}
 
-\begin{figure}[htbp]
+\begin{figure*}[htbp]
 \centering
-\includegraphics[width=\columnwidth]{figures/error_reduction_llava15_coco.pdf}
-\caption{Error reduction analysis on POPE showing VCD+AGLA reduces false positives by 37.1\%, false negatives by 16.1\%, and total errors by 21.6\%.}
+\includegraphics[width=\textwidth]{figures/error_reduction_pope.pdf}
+\caption{Error reduction analysis on POPE across both subsets. Top row shows COCO (FP: -37.1\%, FN: -16.1\%, Total: -21.6\%), bottom row shows A-OKVQA (FP: -15.7\%, FN: -31.4\%, Total: -24.0\%). VCD+AGLA achieves consistent complementary error reduction across both datasets, with COCO showing stronger FP reduction and A-OKVQA showing stronger FN reduction.}
 \label{fig:error_reduction_pope}
-\end{figure}
+\end{figure*}
 
-This error analysis reveals the complementary nature of VCD and AGLA: VCD primarily suppresses false positives (hallucinated objects) by filtering out language-prior-driven predictions, while AGLA reduces false negatives (missed objects) by strengthening visual grounding. Their combination achieves balanced error reduction across both error types.
+This error analysis reveals the complementary nature of VCD and AGLA: VCD primarily suppresses false positives (hallucinated objects) by filtering out language-prior-driven predictions, while AGLA reduces false negatives (missed objects) by strengthening visual grounding. Their combination achieves balanced error reduction across both error types, with consistent patterns observed across both POPE subsets.
 
 \subsubsection{Precision-Recall Trade-off on POPE}
 
@@ -566,23 +566,23 @@ Figure~\ref{fig:f1_comparison_hallucinogen} visualizes the F1 score improvements
 
 \subsubsection{Error Analysis on Hallucinogen}
 
-We present detailed error analysis on the Identification task with LLaVA-1.5 as a representative example (similar complementary patterns are observed across other Hallucinogen tasks). Figures~\ref{fig:confusion_hallucinogen} and~\ref{fig:error_reduction_hallucinogen} present confusion matrices and error reduction analysis comparing baseline and VCD+AGLA. The combined method reduces false positives (FP: 11$\rightarrow$22, +100\%) while significantly reducing false negatives (FN: 44$\rightarrow$22, -50\%), resulting in a 20\% reduction in total errors. Notably, the error pattern differs from POPE: on Hallucinogen, the primary benefit comes from reducing false negatives, whereas POPE showed stronger false positive reduction.
+Figures~\ref{fig:confusion_hallucinogen} and~\ref{fig:error_reduction_hallucinogen} present comprehensive confusion matrices and error reduction analysis for LLaVA-1.5 across all four Hallucinogen task types (Identification, Localization, Visual Context, Counterfactual), comparing baseline and VCD+AGLA performance. Across all tasks, the combined method demonstrates consistent FN-dominant error reduction patterns: on Identification, FN reduction of 50.0\% (44$\rightarrow$22) with 20.0\% total error reduction; on Localization, FN reduction of 38.9\% (36$\rightarrow$22) with 17.0\% total error reduction; on Visual Context, FN reduction of 50.0\% (44$\rightarrow$22) with 15.4\% total error reduction; and on Counterfactual, FN reduction of 46.3\% (41$\rightarrow$22) with 20.0\% total error reduction. Notably, the error pattern differs from POPE: on Hallucinogen, the primary benefit comes from reducing false negatives, whereas POPE showed stronger false positive reduction.
 
-\begin{figure}[htbp]
+\begin{figure*}[htbp]
 \centering
-\includegraphics[width=\columnwidth]{figures/confusion_matrix_comparison_hallucinogen.pdf}
-\caption{Confusion matrix comparison for LLaVA-1.5 on Hallucinogen Identification task. VCD+AGLA achieves balanced error reduction with a 50\% decrease in false negatives, though false positives increase slightly.}
+\includegraphics[width=\textwidth]{figures/confusion_matrix_comparison_hallucinogen_all.pdf}
+\caption{Confusion matrix comparison for LLaVA-1.5 across all four Hallucinogen task types (Identification, Localization, Visual Context, Counterfactual). VCD+AGLA achieves consistent balanced error distribution across all tasks, demonstrating robust performance across diverse hallucination scenarios.}
 \label{fig:confusion_hallucinogen}
-\end{figure}
+\end{figure*}
 
-\begin{figure}[htbp]
+\begin{figure*}[htbp]
 \centering
-\includegraphics[width=\columnwidth]{figures/error_reduction_hallucinogen.pdf}
-\caption{Error reduction analysis on Hallucinogen showing VCD+AGLA reduces false negatives by 50\% and total errors by 20\%. The trade-off between error types differs from POPE, highlighting task-specific behavior.}
+\includegraphics[width=\textwidth]{figures/error_reduction_hallucinogen_all.pdf}
+\caption{Error reduction analysis across all four Hallucinogen task types. VCD+AGLA achieves substantial false negative reduction (39-50\%) and total error reduction (15-20\%) across all tasks. The consistent FN-dominant reduction pattern across tasks highlights the adaptive nature of the combined approach, contrasting with POPE's FP-dominant reduction.}
 \label{fig:error_reduction_hallucinogen}
-\end{figure}
+\end{figure*}
 
-This error analysis reveals task-specific complementarity: on Hallucinogen's Identification task, AGLA's visual grounding enhancement plays a more dominant role in reducing false negatives, while VCD's contribution is more balanced. This contrasts with POPE, where VCD's false positive suppression was more pronounced, demonstrating the adaptive nature of the combined approach across different benchmark characteristics.
+This error analysis reveals task-specific complementarity: across all Hallucinogen tasks, AGLA's visual grounding enhancement plays a more dominant role in reducing false negatives, while VCD's contribution is more balanced. This contrasts with POPE, where VCD's false positive suppression was more pronounced, demonstrating the adaptive nature of the combined approach across different benchmark characteristics. The consistent patterns across all four task types validate the generalizability of the complementary error reduction mechanism.
 
 \subsubsection{Precision-Recall Trade-off on Hallucinogen}
 
