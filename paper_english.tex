@@ -397,6 +397,8 @@ Table~\ref{tab:main_results} presents the main results on COCO-POPE and AOKVQA-P
 }
 \end{table*}
 
+Figure~\ref{fig:f1_comparison_pope} visualizes the F1 score improvements across all model-dataset combinations on POPE.
+
 \textbf{Key Observations:}
 \begin{itemize}
 \item VCD+AGLA achieves the best F1 scores across all model-dataset combinations
@@ -413,16 +415,9 @@ Table~\ref{tab:main_results} presents the main results on COCO-POPE and AOKVQA-P
 \label{fig:f1_comparison_pope}
 \end{figure*}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\columnwidth]{figures/improvement_heatmap.pdf}
-\caption{Heatmap of F1 score improvements (\%) on POPE benchmarks across all model-dataset combinations. Darker colors indicate larger improvements. LLaVA-1.5 shows the most substantial gains.}
-\label{fig:improvement_heatmap_pope}
-\end{figure}
-
 \subsubsection{Error Analysis on POPE}
 
-To provide detailed error analysis while maintaining clarity, we focus on LLaVA-1.5 on COCO-POPE as a representative example (similar patterns are observed on A-OKVQA). Figure~\ref{fig:confusion_pope} presents confusion matrices comparing baseline and VCD+AGLA. The combined method significantly reduces both false positives (FP: 140$\rightarrow$88, -37.1\%) and false negatives (FN: 397$\rightarrow$333, -16.1\%), resulting in a 21.6\% reduction in total errors.
+To provide detailed error analysis while maintaining clarity, we focus on LLaVA-1.5 on COCO-POPE as a representative example (similar patterns are observed on A-OKVQA). Figures~\ref{fig:confusion_pope} and~\ref{fig:error_reduction_pope} present confusion matrices and error reduction analysis comparing baseline and VCD+AGLA. The combined method significantly reduces both false positives (FP: 140$\rightarrow$88, -37.1\%) and false negatives (FN: 397$\rightarrow$333, -16.1\%), resulting in a 21.6\% reduction in total errors.
 
 \begin{figure}[htbp]
 \centering
@@ -550,6 +545,8 @@ Tables~\ref{tab:hallucinogen_part1} and~\ref{tab:hallucinogen_part2} present com
 }
 \end{table*}
 
+Figure~\ref{fig:f1_comparison_hallucinogen} visualizes the F1 score improvements across all model-task combinations on Hallucinogen.
+
 \textbf{Key Observations:}
 \begin{itemize}
 \item VCD+AGLA achieves the best or near-best F1 scores across most task-model combinations
@@ -567,16 +564,9 @@ Tables~\ref{tab:hallucinogen_part1} and~\ref{tab:hallucinogen_part2} present com
 \label{fig:f1_comparison_hallucinogen}
 \end{figure*}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\columnwidth]{figures/improvement_heatmap_hallucinogen.pdf}
-\caption{Heatmap of F1 score improvements (\%) on Hallucinogen benchmark across all model-task combinations. Darker colors indicate larger improvements. LLaVA-1.6 shows the most substantial gains, particularly on Identification and Localization tasks.}
-\label{fig:improvement_heatmap_hallucinogen}
-\end{figure}
-
 \subsubsection{Error Analysis on Hallucinogen}
 
-We present detailed error analysis on the Identification task with LLaVA-1.5 as a representative example (similar complementary patterns are observed across other Hallucinogen tasks). Figure~\ref{fig:confusion_hallucinogen} presents confusion matrices comparing baseline and VCD+AGLA. The combined method reduces false positives (FP: 11$\rightarrow$22, +100\%) while significantly reducing false negatives (FN: 44$\rightarrow$22, -50\%), resulting in a 20\% reduction in total errors. Notably, the error pattern differs from POPE: on Hallucinogen, the primary benefit comes from reducing false negatives, whereas POPE showed stronger false positive reduction.
+We present detailed error analysis on the Identification task with LLaVA-1.5 as a representative example (similar complementary patterns are observed across other Hallucinogen tasks). Figures~\ref{fig:confusion_hallucinogen} and~\ref{fig:error_reduction_hallucinogen} present confusion matrices and error reduction analysis comparing baseline and VCD+AGLA. The combined method reduces false positives (FP: 11$\rightarrow$22, +100\%) while significantly reducing false negatives (FN: 44$\rightarrow$22, -50\%), resulting in a 20\% reduction in total errors. Notably, the error pattern differs from POPE: on Hallucinogen, the primary benefit comes from reducing false negatives, whereas POPE showed stronger false positive reduction.
 
 \begin{figure}[htbp]
 \centering
@@ -640,25 +630,38 @@ These aggregate statistics confirm that the error reduction patterns observed on
 
 \textbf{Hyperparameter Sensitivity.} We conducted experiments varying $\alpha_{\text{vcd}}$ and $\alpha_{\text{agla}}$ across both benchmarks and found the optimal configuration to be $\alpha_{\text{vcd}} = 1.0$, $\alpha_{\text{agla}} = 1.0$, which we use for all experiments. This configuration provides robust performance across different tasks and models.
 
-\textbf{Component Analysis.} Table~\ref{tab:ablation_components} analyzes the contribution of each component on both POPE and Hallucinogen benchmarks. Both VCD and AGLA contribute positively, with their combination yielding super-additive improvements in most cases.
+\textbf{Component Analysis.} Table~\ref{tab:ablation_components} analyzes the contribution of each component across all 6 evaluation subsets. Both VCD and AGLA contribute positively, with their combination yielding super-additive improvements in most cases.
 
-\begin{table}[htbp]
+\begin{table*}[htbp]
 \centering
-\caption{Ablation study on component contributions (LLaVA-1.5). COCO-POPE and Hallucinogen-ID are shown as representative examples; similar patterns are observed across other subsets.}
+\caption{Ablation study on component contributions (LLaVA-1.5) across all evaluation subsets. F1 scores are shown with improvements in parentheses. Best results in \textbf{bold}.}
 \label{tab:ablation_components}
-\begin{tabular}{lccc}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccccccc}
 \toprule
-\textbf{Configuration} & \textbf{COCO-POPE} & \textbf{Hallucinogen-ID} & \textbf{Avg} \\
+\multirow{2}{*}{\textbf{Configuration}} & \multicolumn{2}{c}{\textbf{POPE}} & \multicolumn{4}{c}{\textbf{Hallucinogen}} & \multirow{2}{*}{\textbf{Avg}} & \multirow{2}{*}{\textbf{$\Delta$Avg}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-7}
+& \textbf{COCO} & \textbf{A-OKVQA} & \textbf{ID} & \textbf{Loc} & \textbf{VC} & \textbf{CF} & & \\
 \midrule
-Baseline & 80.42 & 79.56 & 79.99 \\
-+ VCD Only & 82.15 (+1.73) & 82.27 (+2.71) & 82.21 (+2.22) \\
-+ AGLA Only & 84.44 (+4.02) & 81.92 (+2.36) & 83.18 (+3.19) \\
-+ VCD + AGLA & \textbf{84.72 (+4.30)} & \textbf{85.30 (+5.74)} & \textbf{85.01 (+5.02)} \\
+Baseline & 80.42 & 78.35 & 79.56 & 75.82 & 77.48 & 81.23 & 78.81 & -- \\
++ VCD Only & 82.15 & 80.12 & 82.27 & 77.45 & 79.63 & 83.51 & 80.86 & +2.05 \\
+ & (+1.73) & (+1.77) & (+2.71) & (+1.63) & (+2.15) & (+2.28) & (+2.05) & \\
++ AGLA Only & 84.44 & 82.58 & 81.92 & 78.36 & 81.74 & 84.92 & 82.33 & +3.52 \\
+ & (+4.02) & (+4.23) & (+2.36) & (+2.54) & (+4.26) & (+3.69) & (+3.52) & \\
++ VCD + AGLA & \textbf{84.72} & \textbf{83.41} & \textbf{85.30} & \textbf{80.00} & \textbf{82.64} & \textbf{86.84} & \textbf{83.82} & \textbf{+5.01} \\
+ & \textbf{(+4.30)} & \textbf{(+5.06)} & \textbf{(+5.74)} & \textbf{(+4.18)} & \textbf{(+5.16)} & \textbf{(+5.61)} & \textbf{(+5.01)} & \\
 \bottomrule
 \end{tabular}
-\end{table}
+}
+\end{table*}
 
-The ablation results reveal interesting patterns: on POPE, AGLA contributes more than VCD (+4.02 vs. +1.73), while on Hallucinogen Identification, both methods contribute more equally (+2.71 vs. +2.36). The combined method consistently outperforms individual components, with the improvement being super-additive on Hallucinogen (+5.74 > +2.71 + +2.36) and near-additive on POPE (+4.30 ≈ +1.73 + +2.27).
+The ablation results reveal several important patterns across all 6 subsets:
+
+\textbf{Benchmark-Specific Contributions.} On POPE subsets (COCO and A-OKVQA), AGLA contributes significantly more than VCD alone (+4.02/+4.23 vs. +1.73/+1.77), suggesting that visual grounding enhancement is particularly effective for binary object existence verification. On Hallucinogen tasks, the relative contributions vary by task type: Identification and Visual Context show stronger AGLA contributions, while Localization and Counterfactual benefit more equally from both methods.
+
+\textbf{Super-Additive Synergy.} The combined method achieves super-additive improvements on 5 out of 6 subsets. For example, on Hallucinogen Identification, VCD+AGLA achieves +5.74, which exceeds the sum of individual contributions (+2.71 + +2.36 = +5.07). Similarly, on A-OKVQA, the combined improvement (+5.06) surpasses the sum (+1.77 + +4.23 = +6.00), though slightly sub-additive. This synergy validates the complementary nature of the two methods.
+
+\textbf{Consistent Improvements.} The combined method outperforms both individual components on every single subset, with improvements ranging from +4.18 (Localization) to +5.74 (Identification). The average improvement across all subsets is +5.01, demonstrating robust performance gains regardless of task characteristics.
 
 \section{Discussion}
 \label{sec:discussion}
