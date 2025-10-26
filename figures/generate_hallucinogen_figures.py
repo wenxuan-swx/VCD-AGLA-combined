@@ -354,7 +354,12 @@ def generate_error_reduction_hallucinogen():
     plt.close()
 
 def generate_error_reduction_hallucinogen_all_tasks():
-    """Generate error reduction analysis for all 4 Hallucinogen tasks in 2x2 layout."""
+    """Generate error reduction analysis for all 4 Hallucinogen tasks in 4x2 layout.
+
+    Uses dual-subplot structure matching POPE style:
+    - Left column: Error counts (Baseline vs VCD+AGLA)
+    - Right column: Error reduction percentages
+    """
     # Data from Tables 5 and 6 for LLaVA-1.5 on all 4 tasks
     tasks_data = {
         'Identification': {
@@ -375,8 +380,8 @@ def generate_error_reduction_hallucinogen_all_tasks():
         }
     }
 
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    axes = axes.flatten()
+    # Create 4x2 layout (4 tasks, 2 subplots per task)
+    fig, axes = plt.subplots(4, 2, figsize=(14, 16))
 
     tasks = ['Identification', 'Localization', 'Visual Context', 'Counterfactual']
 
@@ -403,49 +408,59 @@ def generate_error_reduction_hallucinogen_all_tasks():
         total_errors_combined = combined_fp + combined_fn
         total_reduction = (total_errors_baseline - total_errors_combined) / total_errors_baseline * 100
 
-        # Create a combined bar chart showing both counts and reductions
-        ax = axes[idx]
-
-        error_types = ['FP', 'FN', 'Total']
+        # Left plot: Error counts (column 0)
+        ax1 = axes[idx, 0]
+        error_types = ['False Positives', 'False Negatives', 'Total Errors']
         baseline_errors = [baseline_fp, baseline_fn, total_errors_baseline]
         combined_errors = [combined_fp, combined_fn, total_errors_combined]
-        reductions = [fp_reduction, fn_reduction, total_reduction]
 
         x = np.arange(len(error_types))
         width = 0.35
 
-        bars1 = ax.bar(x - width/2, baseline_errors, width, label='Baseline',
+        bars1 = ax1.bar(x - width/2, baseline_errors, width, label='Baseline',
                         color='#e74c3c', alpha=0.8)
-        bars2 = ax.bar(x + width/2, combined_errors, width, label='VCD+AGLA',
+        bars2 = ax1.bar(x + width/2, combined_errors, width, label='VCD+AGLA',
                         color='#27ae60', alpha=0.8)
 
-        # Add value labels on bars
+        # Add value labels
         for bars in [bars1, bars2]:
             for bar in bars:
                 height = bar.get_height()
-                ax.text(bar.get_x() + bar.get_width()/2., height,
+                ax1.text(bar.get_x() + bar.get_width()/2., height,
                         f'{int(height)}',
-                        ha='center', va='bottom', fontsize=8)
+                        ha='center', va='bottom', fontsize=9)
 
-        # Add reduction percentages above
-        for i, (err_type, red) in enumerate(zip(error_types, reductions)):
-            y_pos = max(baseline_errors[i], combined_errors[i]) * 1.15
-            color = '#2ecc71' if red > 0 else '#e74c3c'
-            ax.text(i, y_pos, f'{red:+.1f}%',
-                   ha='center', va='bottom', fontsize=9, fontweight='bold', color=color)
-
-        ax.set_xlabel('Error Type', fontsize=9)
-        ax.set_ylabel('Count', fontsize=9)
-        ax.set_title(f'{task}', fontsize=11, fontweight='bold')
-        ax.set_xticks(x)
-        ax.set_xticklabels(error_types)
+        ax1.set_xlabel('Error Type')
+        ax1.set_ylabel('Count')
+        ax1.set_title(f'{task}: Error Counts')
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(error_types, rotation=15, ha='right')
         if idx == 0:
-            ax.legend(fontsize=8)
-        ax.grid(axis='y', alpha=0.3)
-        ax.set_ylim([0, max(baseline_errors) * 1.3])
+            ax1.legend()
+        ax1.grid(axis='y', alpha=0.3)
 
-    fig.suptitle(f'Error Reduction Analysis: LLaVA-1.5 on Hallucinogen (All Tasks)',
-                 fontsize=14, y=0.995)
+        # Right plot: Error reduction percentages (column 1)
+        ax2 = axes[idx, 1]
+        reductions = [fp_reduction, fn_reduction, total_reduction]
+        colors = ['#3498db', '#9b59b6', '#e67e22']
+
+        bars = ax2.bar(error_types, reductions, color=colors, alpha=0.8)
+
+        # Add value labels
+        for bar, reduction in zip(bars, reductions):
+            height = bar.get_height()
+            ax2.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{reduction:.1f}%',
+                    ha='center', va='bottom', fontsize=9, fontweight='bold')
+
+        ax2.set_xlabel('Error Type')
+        ax2.set_ylabel('Reduction (%)')
+        ax2.set_title(f'{task}: Error Reduction')
+        ax2.set_xticklabels(error_types, rotation=15, ha='right')
+        ax2.grid(axis='y', alpha=0.3)
+        ax2.set_ylim([min(0, min(reductions) * 1.2), max(reductions) * 1.2])
+
+    fig.suptitle(f'LLaVA-1.5-7B on Hallucinogen', fontsize=13, y=0.995)
 
     plt.tight_layout()
     plt.savefig('error_reduction_hallucinogen_all.pdf', dpi=300, bbox_inches='tight')
