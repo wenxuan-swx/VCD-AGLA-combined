@@ -16,21 +16,24 @@ Overleaf 上传说明
 -------------------
 将 figures/ 文件夹中的所有 PDF 文件上传到 Overleaf 的 figures/ 文件夹中：
 
-必需的图片文件（10个）：
+必需的图片文件（11个）：
 
 POPE 基准测试图片：
 1. f1_comparison_by_model.pdf          - 图1: F1分数对比（按模型）
-2. improvement_heatmap.pdf             - 图2: 改进热力图
+2. improvement_heatmap.pdf             - 图2: 改进热力图（POPE）
 3. confusion_matrix_comparison_llava15_coco.pdf - 图3: 混淆矩阵对比
 4. error_reduction_llava15_coco.pdf    - 图4: 错误减少分析
 5. pr_scatter_comparison.pdf           - 图5: 精确率-召回率散点图
 
-Hallucinogen 基准测试图片（新增）：
+Hallucinogen 基准测试图片：
 6. f1_comparison_hallucinogen.pdf      - 图6: F1分数对比（Hallucinogen）
 7. improvement_heatmap_hallucinogen.pdf - 图7: 改进热力图（Hallucinogen）
 8. confusion_matrix_comparison_hallucinogen.pdf - 图8: 混淆矩阵对比（Hallucinogen）
 9. error_reduction_hallucinogen.pdf    - 图9: 错误减少分析（Hallucinogen）
 10. pr_scatter_hallucinogen.pdf        - 图10: 精确率-召回率散点图（Hallucinogen）
+
+跨基准测试对比图片（新增）：
+11. improvement_heatmap_unified.pdf    - 图11: 统一改进热力图（所有6个子集）
 
 步骤 4: 编译论文
 ---------------
@@ -58,7 +61,8 @@ project_root/
     ├── improvement_heatmap_hallucinogen.pdf
     ├── confusion_matrix_comparison_hallucinogen.pdf
     ├── error_reduction_hallucinogen.pdf
-    └── pr_scatter_hallucinogen.pdf
+    ├── pr_scatter_hallucinogen.pdf
+    └── improvement_heatmap_unified.pdf
 
 如果遇到问题：
 -------------
@@ -66,27 +70,32 @@ project_root/
 - 确认所有文件都已成功上传
 - 查看 Overleaf 的编译日志以获取详细错误信息
 
-重要更新说明（2025-10-26）：
-============================
-1. Section 5 "Results and Analysis" 已完全重写
-   - POPE 和 Hallucinogen 基准测试现在具有完全平行的结构
-   - 两个基准测试都有相同深度的分析和可视化
-   - 新增了 Cross-Benchmark Analysis 小节
+重要更新说明：
+==============
 
-2. 新增了 5 个 Hallucinogen 基准测试的可视化图表
-   - F1 对比图、改进热力图、混淆矩阵、错误减少分析、PR 散点图
+【2025-10-26 更新 1】Section 5 完全重写
+- POPE 和 Hallucinogen 基准测试现在具有完全平行的结构
+- 两个基准测试都有相同深度的分析和可视化
+- 新增了 Cross-Benchmark Analysis 小节
+- 新增了 5 个 Hallucinogen 基准测试的可视化图表
 
-3. 修正了 AGLA 论文的引用信息
-   - 作者从 Sun, Hanchao 等人改为 An, Wenbin 等人
-   - 标题更新为正确的 "Assembly of Global and Local Attention"
-   - 会议更新为 CVPR 2025
+【2025-10-26 更新 2】修复三个关键问题
+1. Issue 3 (表格溢出):
+   - 将 Hallucinogen 表格拆分为两个表格（ID+Loc, VC+CF）
+   - 防止表格过长导致显示问题
 
-4. 改进了 LaTeX 浮动体控制
-   - 添加了 float 和 placeins 包
-   - 优化了浮动体放置参数
-   - 使用 \FloatBarrier 确保图表正确定位
+2. Issue 1 (子集选择一致性):
+   - 为 COCO 和 Identification 的选择添加了明确说明
+   - 在 Cross-Benchmark Analysis 中添加了所有 6 个子集的聚合统计
+   - 更新了消融研究表格标题，说明这些是代表性示例
 
-5. 更新了 Discussion 和 Conclusion 部分
-   - 现在同时引用两个基准测试的结果
-   - 提供了更全面的跨基准测试分析
+3. Issue 2 (热力图冗余):
+   - 保留了 POPE 和 Hallucinogen 的独立热力图
+   - 新增了统一的跨基准测试热力图（所有 6 个子集）
+   - 提供了详细的基准内分析和跨基准对比
+
+【之前的更新】
+- 修正了 AGLA 论文的引用信息（作者、标题、会议）
+- 改进了 LaTeX 浮动体控制
+- 更新了 Discussion 和 Conclusion 部分
 
